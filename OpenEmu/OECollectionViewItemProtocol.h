@@ -24,8 +24,11 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Foundation/Foundation.h>
+@import Foundation;
 
 @protocol OECollectionViewItemProtocol <NSObject>
 - (BOOL)isCollectionEditable;
+@optional
+- (BOOL)collectionSupportsQuickLook;
+- (NSPredicate*)baseFilterPredicate;
 @end

@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2011, OpenEmu Team
+ Copyright (c) 2015, OpenEmu Team
  
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -25,7 +25,8 @@
  */
 
 #import "OEDBCollection.h"
-#import "OETheme.h"
+
+NS_ASSUME_NONNULL_BEGIN
 
 @implementation OEDBCollection
 
@@ -33,33 +34,35 @@
 {
     return @"Collection";
 }
-#pragma mark -
-#pragma mark Data Model Properties
+
+#pragma mark - Data Model Properties
+
 @dynamic name;
 
-#pragma mark -
-#pragma mark Data Model Relationships
+#pragma mark - Data Model Relationships
+
 @dynamic games;
 
-- (NSMutableSet*)mutableGames;
+- (nullable NSMutableSet <OEDBGame *> *)mutableGames;
 {
     return [self mutableSetValueForKeyPath:@"games"];
 }
 
 #pragma mark - Sidebar Item Protocol
-- (NSString*)viewControllerClassName
+
+- (nullable NSString *)viewControllerClassName
 {
     return @"OEGameCollectionViewController";
 }
 
-- (NSString*)sidebarID
+- (nullable NSString *)sidebarID
 {
-    return [[self permanentIDURI] absoluteString];
+    return self.permanentIDURI.absoluteString;
 }
 
-- (NSImage *)sidebarIcon
+- (nullable NSImage *)sidebarIcon
 {
-    return [[OETheme sharedTheme] imageForKey:@"collections_simple" forState:OEThemeStateDefault];
+    return [NSImage imageNamed:@"collection_simple"];
 }
 
 - (NSString *)sidebarName
@@ -93,7 +96,8 @@
 }
 
 #pragma mark - OEGameCollectionView item
-- (NSString *)collectionViewName
+
+- (nullable NSString *)collectionViewName
 {
     return [self valueForKey:@"name"];
 }
@@ -103,7 +107,7 @@
     return YES;
 }
 
-- (NSArray *)items
+- (NSArray * _Nullable)items
 {
     return nil;
 }
@@ -112,11 +116,13 @@
 {
     return [NSPredicate predicateWithFormat:@"ANY collections == %@", self];
 }
+
 - (NSInteger)fetchLimit
 {
     return 0;
 }
-- (NSArray*)fetchSortDescriptors
+
+- (NSArray <NSSortDescriptor *> *)fetchSortDescriptors
 {
     return @[];
 }
@@ -127,3 +133,5 @@
 }
 
 @end
+
+NS_ASSUME_NONNULL_END

@@ -24,18 +24,18 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Foundation/Foundation.h>
+@import Foundation;
 
-extern NSString *const OEPreferencePaneDidChangeVisibilityNotificationName;
+NS_ASSUME_NONNULL_BEGIN
 
 @protocol OEPreferencePane <NSObject>
-- (NSImage *)icon;
-- (NSString *)title;
-- (NSString *)localizedTitle;
 
-- (NSSize)viewSize;
+@property (readonly) NSImage *icon;
+@property (readonly) NSString *panelTitle;
+@property (readonly) NSString *localizedPanelTitle;
 
-@optional
-- (NSColor *)toolbarSeparationColor;
-- (BOOL)isVisible;
+@property (readonly) NSSize viewSize;
+
 @end
+
+NS_ASSUME_NONNULL_END

@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2014, OpenEmu Team
+ Copyright (c) 2015, OpenEmu Team
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -24,24 +24,25 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Foundation/Foundation.h>
-#import <CoreData/CoreData.h>
+@import Foundation;
+@import CoreData;
+@import Quartz;
 #import "OEDBItem.h"
 
 @class OEDBRom;
 
+NS_ASSUME_NONNULL_BEGIN
+
 extern NSString * const OEDBScreenshotImportRequired;
 
-@interface OEDBScreenshot : OEDBItem <NSPasteboardWriting>
+@interface OEDBScreenshot: OEDBItem <NSPasteboardWriting, QLPreviewItem>
 
-+ (instancetype)createObjectInContext:(NSManagedObjectContext *)context forROM:(OEDBRom*)rom withFile:(NSURL*)file;
++ (nullable instancetype)createObjectInContext:(NSManagedObjectContext *)context forROM:(OEDBRom *)rom withFile:(NSURL *)fileURL;
 - (void)updateFile;
 
-@property (nonatomic, retain) NSString * location;
-@property (nonatomic, retain) NSString * name;
-@property (nonatomic, retain) NSDate * timestamp;
-@property (nonatomic, retain) NSString * userDescription;
-@property (nonatomic, retain) OEDBRom *rom;
-
 @property (nonatomic, assign) NSURL *URL;
+@property (nonatomic, readonly) NSURL *screenshotURL;
+
 @end
+
+NS_ASSUME_NONNULL_END

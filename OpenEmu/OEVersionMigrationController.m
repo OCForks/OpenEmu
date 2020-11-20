@@ -30,10 +30,12 @@
 
 #import "OEDBImageMigrationPolicy.h"
 #import "OELibraryDatabase.h"
+#import "OEDBGame.h"
 #import "OEDBImage.h"
-#import "OEDBScreenshot.h"
+#import "OEDBRom.h"
+#import "OEDBScreenshot+CoreDataProperties.h"
 
-#import "NSURL+OELibraryAdditions.h"
+#import "OpenEmu-Swift.h"
 
 @interface _OEMigrator : NSObject
 {
@@ -139,7 +141,7 @@ static OEVersionMigrationController *sDefaultMigrationController = nil;
 - (void)OE_runImageMigration
 {
     dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0);
-    void (^block)() = ^{
+    void (^block)(void) = ^{
         NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
         OEBitmapImageFileType format = [userDefaults integerForKey:OEGameArtworkFormatKey];
         NSDictionary     *attributes = [userDefaults dictionaryForKey:OEGameArtworkPropertiesKey];
@@ -306,10 +308,10 @@ static OEVersionMigrationController *sDefaultMigrationController = nil;
         else
             *err = [NSError errorWithDomain:OEVersionMigrationErrorDomain
                                        code:1 
-                                   userInfo:[NSDictionary dictionaryWithObjectsAndKeys:
-                                             NSLocalizedString(@"Some migrations failed to complete properly", @""),NSLocalizedDescriptionKey,
-                                             errors,OEVersionMigrationFailureErrorsKey,
-                                             nil]];
+                                   userInfo:@{
+                                              OEVersionMigrationFailureErrorsKey : errors,
+                                              NSLocalizedDescriptionKey : NSLocalizedString(@"Some migrations failed to complete properly", @"")
+                                              }];
         
         NSLog(@"Error migrating! %@,", *err);
     }

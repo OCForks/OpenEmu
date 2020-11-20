@@ -24,24 +24,22 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Cocoa/Cocoa.h>
-#import <ImageKit/ImageKit.h>
+@import Cocoa;
+@import Quartz;
 
 extern NSSize const defaultGridSize;
 extern NSString * const OEImageBrowserGroupSubtitleKey;
-extern NSString *const OECoverGridViewGlossDisabledKey;
 
 typedef enum
 {
     IKImageBrowserDropNone = 2
 } ExtendedIKImageBrowserDropOperation;
 
-@interface OEGridView : IKImageBrowserView <NSTextFieldDelegate>
+@interface OEGridView : IKImageBrowserView <NSTextFieldDelegate, NSViewToolTipOwner>
 @property NSImage *proposedImage;
 @property (assign) IKImageBrowserDropOperation draggingOperation;
 
 @property Class cellClass;
-@property (nonatomic, strong) NSString *groupThemeKey;
 @property (nonatomic) BOOL automaticallyMinimizeRowMargin;
 
 - (void)performSetup;
@@ -57,4 +55,6 @@ typedef enum
 
 @protocol OEGridViewDelegate <NSObject>
 - (void)gridView:(OEGridView*)gridView setTitle:(NSString*)title forItemAtIndex:(NSInteger)index;
+@optional
+- (BOOL)toggleQuickLook;
 @end

@@ -23,8 +23,9 @@
  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#import <Cocoa/Cocoa.h>
+@import Cocoa;
 #import "OEPreferencePane.h"
+#import "OEPrefDebugController.h"
 
 @class OEBackgroundGradientView;
 @class OEControlsButtonSetupView;
@@ -51,6 +52,7 @@
 @property(weak)   IBOutlet NSPopUpButton             *inputPopupButton;
 
 @property(weak)   IBOutlet OEBackgroundGradientView  *gradientOverlay;
+@property(weak)   IBOutlet NSVisualEffectView        *veView;
 @property(weak)   IBOutlet NSView                    *controlsContainer;
 
 @property(weak)   IBOutlet OEControlsButtonSetupView *controlsSetupView;
@@ -64,16 +66,12 @@
 - (BOOL)isKeyboardEventSelected;
 - (void)registerEvent:(OEHIDEvent *)anEvent;
 
+- (void)preparePaneWithNotification:(NSNotification *)notification;
+
 - (IBAction)changeSystem:(id)sender;
 - (IBAction)changePlayer:(id)sender;
 - (IBAction)changeInputDevice:(id)sender;
 - (IBAction)changeInputControl:(id)sender;
 - (IBAction)searchForWiimote:(id)sender;
-
-#pragma mark -
-- (NSImage *)icon;
-- (NSString *)title;
-
-- (NSSize)viewSize;
 
 @end

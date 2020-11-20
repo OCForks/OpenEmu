@@ -27,10 +27,11 @@
 
 #import <Cocoa/Cocoa.h>
 
-#define GENERATE_PRAGMA(x) _Pragma(#x)
-#define TODO(x) GENERATE_PRAGMA(message("[TODO] " #x))
-#define FIXME(x) GENERATE_PRAGMA(message("[FIXME] " #x))
-#define NOTE(x) GENERATE_PRAGMA(message("[NOTE] " #x))
+NS_ASSUME_NONNULL_BEGIN
+
+#define TODO(x)
+#define FIXME(x)
+#define NOTE(x)
 
 #define BOOL_STR(value) ((value) ? "YES" : "NO")
 
@@ -39,7 +40,10 @@
 void tohex(const unsigned char *input, size_t len, char *output);
 void OEPrintFirstResponderChain(void);
 NSArray *OENextRespondersFromResponder(NSResponder *responder);
+
 NSString *temporaryDirectoryForDecompressionOfPath(NSString *aPath);
-bool GetSystemVersion( int *major, int *minor, int *bugfix );
+NSString *decompressedPathForRomAtPath(NSString *aPath);
+NSString *OETemporaryDirectoryForDecompressionOfFileWithHash(NSString *aPath, NSString * __nullable hash);
+NSString *OEDecompressFileInArchiveAtPathWithHash(NSString *aPath, NSString * __nullable hash, BOOL * __nullable success);
 
-
+NS_ASSUME_NONNULL_END

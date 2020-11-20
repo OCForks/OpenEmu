@@ -23,12 +23,12 @@
  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#import <Foundation/Foundation.h>
-#import "OEUIDrawingUtils.h"
+
+@import Cocoa;
 
 @interface OERatingCell : NSCell
 
-- (NSRect)imageRectForRating:(NSInteger)rating state:(OEUIState)state;
+- (NSRect)imageRectForRating:(NSInteger)rating;
 
 - (NSInteger)ratingForPoint:(NSPoint)aPoint inTableView:(NSTableView *)view;
 - (void)updateRatingWithPoint:(NSPoint)aPoint inTableView:(NSTableView *)view;

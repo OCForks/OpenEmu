@@ -26,15 +26,28 @@
 
 #import "OECollectionViewController.h"
 #import "OEGameGridViewDelegate.h"
-@interface OEGameCollectionViewController : OECollectionViewController <OEGameGridViewDelegate>
-- (IBAction)showSelectedGamesInFinder:(id)sender;
 
-- (void)deleteSaveState:(id)stateItem;
-- (void)makeNewCollectionWithSelectedGames:(id)sender;
-- (void)addSelectedGamesToCollection:(id)sender;
-- (void)downloadCoverArt:(id)sender;
-- (void)cancelCoverArtDownload:(id)sender;
-- (void)addCoverArtFromFile:(id)sender;
-- (void)addSaveStateFromFile:(id)sender;
-- (void)consolidateFiles:(id)sender;
+NS_ASSUME_NONNULL_BEGIN
+
+extern NSNotificationName const OEGameCollectionViewControllerDidSetSelectionIndexesNotification;
+
+@interface OEGameCollectionViewController : OECollectionViewController <OEGameGridViewDelegate, NSMenuItemValidation, NSViewToolTipOwner>
+- (IBAction)showInFinder:(nullable id)sender;
+
+- (void)performSearch:(NSString *)text;
+
+- (void)deleteSaveState:(nullable id)stateItem;
+- (void)deleteSelectedItems:(nullable id)sender;
+- (void)addSelectedGamesToCollection:(nullable id)sender;
+- (void)downloadCoverArt:(nullable id)sender;
+- (void)cancelCoverArtDownload:(nullable id)sender;
+- (void)addCoverArtFromFile:(nullable id)sender;
+- (void)addSaveStateFromFile:(nullable id)sender;
+- (void)consolidateFiles:(nullable id)sender;
+
+/// The search term of the currently applied filter.
+@property (copy, nullable) NSString *currentSearchTerm;
+
 @end
+
+NS_ASSUME_NONNULL_END

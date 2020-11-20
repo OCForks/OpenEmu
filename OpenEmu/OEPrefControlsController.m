@@ -24,26 +24,20 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Quartz/Quartz.h>
-
-#import "NSViewController+OEAdditions.h"
-
 #import "OEPrefControlsController.h"
-#import "OEBackgroundGradientView.h"
-#import "OEBackgroundImageView.h"
 #import "OELibraryDatabase.h"
 
-#import "OEPlugin.h"
+@import OpenEmuKit;
 #import "OEDBSystem.h"
-#import "OESystemPlugin.h"
 
 #import "OEControllerImageView.h"
 #import "OEControlsButtonSetupView.h"
 
-#import "OEHUDAlert+DefaultAlertsAdditions.h"
-
-#import "OEPreferencesController.h"
 #import <OpenEmuSystem/OpenEmuSystem.h>
+
+@import Quartz;
+
+#import "OpenEmu-Swift.h"
 
 NSString *const OELastControlsPluginIdentifierKey = @"lastControlsPlugin";
 NSString *const OELastControlsPlayerKey           = @"lastControlsPlayer";
@@ -59,16 +53,6 @@ static NSString *const _OEKeyboardMenuItemRepresentedObject = @"org.openemu.Bind
     NSMutableSet   *ignoredEvents;
     id _eventMonitor;
 }
-
-- (void)OE_setCurrentBindingsForEvent:(OEHIDEvent *)anEvent;
-- (void)OE_rebuildSystemsMenu;
-- (void)OE_setUpControllerImageView;
-- (void)OE_preparePaneWithNotification:(NSNotification *)notification;
-- (void)OE_scrollerStyleDidChange;
-
-// Only one event can be managed at a time, all events should be ignored until the currently read event went back to its null state
-// All ignored events are stored until they go back to the null state
-- (BOOL)OE_shouldRegisterEvent:(OEHIDEvent *)anEvent;
 
 @property(nonatomic, readwrite) OESystemBindings *currentSystemBindings;
 @property(nonatomic, readwrite) OEPlayerBindings *currentPlayerBindings;
@@ -89,12 +73,7 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
 
 + (NSSet *)keyPathsForValuesAffectingCurrentPlayerBindings
 {
-    return [NSSet setWithObjects:@"currentSystemBindings", @"currentSystemBindings.devicePlayerBindings", @"selectedPlayer", nil];
-}
-
-- (void)dealloc
-{
-    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    return [NSSet setWithArray:@[@"currentSystemBindings", @"currentSystemBindings.devicePlayerBindings", @"selectedPlayer"]];
 }
 
 #pragma mark - ViewController Overrides
@@ -116,9 +95,6 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
     [[self controlsSetupView] bind:@"bindingsProvider" toObject:self withKeyPath:@"currentPlayerBindings" options:nil];
 
     NSUserDefaults *sud = [NSUserDefaults standardUserDefaults];
-
-    NSImage *controlsBackgroundImage = [NSImage imageNamed:@"controls_background"];
-    [(OEBackgroundImageView *)[self view] setImage:controlsBackgroundImage];
 
     // Setup controls popup console list
     [self OE_rebuildSystemsMenu];
@@ -142,15 +118,24 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
     [self changeSystem:[self consolesPopupButton]];
     [CATransaction commit];
 
-    [self gradientOverlay].topColor = [NSColor colorWithDeviceWhite:0.0 alpha:0.3];
-    [self gradientOverlay].bottomColor = [NSColor colorWithDeviceWhite:0.0 alpha:0.0];
+    if([NSUserDefaults.standardUserDefaults integerForKey:OEControlsPrefsAppearancePreferenceKey] == OEControlsPrefsAppearancePreferenceValueWood)
+    {
+        self.gradientOverlay.topColor = [NSColor colorWithDeviceWhite:0.0 alpha:0.3];
+        self.gradientOverlay.bottomColor = [NSColor colorWithDeviceWhite:0.0 alpha:0.0];
+        
+        NSAppearance *aquaAppearance = [NSAppearance appearanceNamed:NSAppearanceNameAqua];
+        self.controlsContainer.enclosingScrollView.appearance = aquaAppearance;
+    }
+    else if([NSUserDefaults.standardUserDefaults integerForKey:OEControlsPrefsAppearancePreferenceKey] == OEControlsPrefsAppearancePreferenceValueWoodVibrant)
+    {
+        self.veView.blendingMode = NSVisualEffectBlendingModeWithinWindow;
+        self.veView.state = NSVisualEffectStateActive;
+    }
 
     [[self controllerView] setWantsLayer:YES];
 
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
-    [center addObserver:self selector:@selector(systemsChanged) name:OEDBSystemsDidChangeNotification object:nil];
-    [center addObserver:self selector:@selector(OE_preparePaneWithNotification:) name:OEPreferencesOpenPaneNotificationName object:nil];
-    [center addObserver:self selector:@selector(OE_preparePaneWithNotification:) name:OEPreferencesSetupPaneNotificationName object:nil];
+    [center addObserver:self selector:@selector(systemsChanged) name:OEDBSystemAvailabilityDidChangeNotification object:nil];
 
     [center addObserver:self selector:@selector(OE_devicesDidUpdateNotification:) name:OEDeviceManagerDidAddDeviceHandlerNotification object:[OEDeviceManager sharedDeviceManager]];
     [center addObserver:self selector:@selector(OE_devicesDidUpdateNotification:) name:OEDeviceManagerDidRemoveDeviceHandlerNotification object:[OEDeviceManager sharedDeviceManager]];
@@ -160,30 +145,40 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
 
 - (void)OE_scrollerStyleDidChange
 {
+    [self.controlsSetupView layoutSubviews:NO];
+}
+
+- (void)viewDidLayout
+{
+    [super viewDidLayout];
+    
+    // Fixes an issue where, if the controls pane isn't already the default selected pane on launch and the user manually selects the controls pane, the "Gameplay Buttons" OEControlsSectionTitleView has a visible "highlight" artifact until the scroll view gets scrolled.
     [[self controlsSetupView] layoutSubviews:NO];
 }
 
 - (void)viewDidAppear
 {
     [super viewDidAppear];
-
+    
     if([[[self view] window] isKeyWindow])
         [self OE_setUpEventMonitor];
 
     NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
-    [nc addObserver:self selector:@selector(windowDidBecomeKey:) name:NSWindowDidBecomeKeyNotification object:[[self view] window]];
-    [nc addObserver:self selector:@selector(windowDidResignKey:) name:NSWindowDidResignKeyNotification object:[[self view] window]];
+    [nc addObserver:self selector:@selector(windowDidBecomeKey:) name:NSWindowDidBecomeKeyNotification object:nil];
+    [nc addObserver:self selector:@selector(windowDidResignKey:) name:NSWindowDidResignKeyNotification object:nil];
 }
 
 - (void)viewWillDisappear
 {
     [super viewWillDisappear];
+    
+    self.selectedKey = nil;
 
     [[OEBindingsController defaultBindingsController] synchronize];
 
     NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
-    [nc removeObserver:self name:NSWindowDidBecomeKeyNotification object:[[self view] window]];
-    [nc removeObserver:self name:NSWindowDidResignKeyNotification object:[[self view] window]];
+    [nc removeObserver:self name:NSWindowDidBecomeKeyNotification object:self.view.window];
+    [nc removeObserver:self name:NSWindowDidResignKeyNotification object:self.view.window];
 
     [self OE_tearDownEventMonitor];
 }
@@ -203,12 +198,17 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
 
 - (void)windowDidBecomeKey:(NSNotification *)notification
 {
-    [self OE_setUpEventMonitor];
+    if (notification.object == self.view.window) {
+        [self OE_setUpEventMonitor];
+    }
 }
 
 - (void)windowDidResignKey:(NSNotification *)notification
 {
-    [self OE_tearDownEventMonitor];
+    if (notification.object == self.view.window) {
+        self.selectedKey = nil;
+        [self OE_tearDownEventMonitor];
+    }
 }
 
 - (void)OE_tearDownEventMonitor
@@ -221,17 +221,20 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
 
 - (void)animationDidStart:(CAAnimation *)theAnimation
 {
-    [[[self controllerView] layer] setValue:[NSNumber numberWithFloat:1.0] forKeyPath:@"filters.pixellate.inputScale"];
+    [[[self controllerView] layer] setValue:@1.0 forKeyPath:@"filters.pixellate.inputScale"];
 }
 
 - (void)animationDidStop:(CAAnimation *)theAnimation finished:(BOOL)flag
 {
-    if(flag) [[[self controllerView] layer] setValue:[NSNumber numberWithInt:10.0] forKeyPath:@"filters.pixellate.inputScale"];
+    if(flag) [[[self controllerView] layer] setValue:@10.0 forKeyPath:@"filters.pixellate.inputScale"];
 }
 
 - (NSString *)nibName
 {
-    return @"OEPrefControlsController";
+    if([NSUserDefaults.standardUserDefaults integerForKey:OEControlsPrefsAppearancePreferenceKey] == OEControlsPrefsAppearancePreferenceValueWood)
+        return @"OEPrefControlsController";
+    else
+        return @"OEPrefControlsController2";
 }
 
 - (void)systemsChanged
@@ -314,6 +317,8 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
 - (void)OE_setUpInputMenu;
 {
     NSMenu *inputMenu = [[NSMenu alloc] init];
+    inputMenu.autoenablesItems = NO;
+    
     NSMenuItem *inputItem = [inputMenu addItemWithTitle:NSLocalizedString(@"Keyboard", @"Keyboard bindings menu item.") action:NULL keyEquivalent:@""];
     [inputItem setRepresentedObject:_OEKeyboardMenuItemRepresentedObject];
 
@@ -323,7 +328,7 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
 
     [inputMenu addItem:[NSMenuItem separatorItem]];
 
-    [inputMenu addItemWithTitle:NSLocalizedString(@"Add a Wiimote…", @"Wiimote bindings menu item.") action:@selector(searchForWiimote:) keyEquivalent:@""];
+    [[inputMenu addItemWithTitle:NSLocalizedString(@"Add a Wiimote…", @"Wiimote bindings menu item.") action:@selector(searchForWiimote:) keyEquivalent:@""] setTarget:self];
 
     [[self inputPopupButton] setMenu:inputMenu];
     [self OE_updateInputPopupButtonSelection];
@@ -342,9 +347,9 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
 
     for(NSMenuItem *item in [inputButton itemArray])
     {
-        if([item state] == NSOnState) continue;
+        if([item state] == NSControlStateValueOn) continue;
         if([item representedObject])
-            [item setState:[item representedObject] == currentDeviceHandler ? NSMixedState : NSOffState];
+            [item setState:[item representedObject] == currentDeviceHandler ? NSControlStateValueMixed : NSControlStateValueOff];
     }
 
     [inputButton selectItemAtIndex:MAX(0, [inputButton indexOfItemWithRepresentedObject:representedObject])];
@@ -407,7 +412,7 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
 
     NSRect rect = (NSRect){ .size = { [self controlsSetupView].bounds.size.width, preferenceView.frame.size.height }};
     [preferenceView setFrame:rect];
-
+    
     NSScrollView *scrollView = [[self controlsSetupView] enclosingScrollView];
     [[self controlsSetupView] setFrameOrigin:(NSPoint){ 0, scrollView.frame.size.height - rect.size.height}];
 
@@ -424,7 +429,7 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
     [self changePlayer:[self playerPopupButton]];
     [self changeInputDevice:[self inputPopupButton]];
 
-    [self OE_setUpControllerImageView];
+    [self OE_setUpControllerImageView];    
 }
 
 - (void)OE_setUpControllerImageView
@@ -442,33 +447,31 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
     // Setup animation that transitions the old controller image out
     CGMutablePathRef pathTransitionOut = CGPathCreateMutable();
     CGPathMoveToPoint(pathTransitionOut, NULL, 0.0f, 0.0f);
-    CGPathAddLineToPoint(pathTransitionOut, NULL, 0.0f, -50.0f);
     CGPathAddLineToPoint(pathTransitionOut, NULL, 0.0f, 450.0f);
 
     CAKeyframeAnimation *outTransition = [CAKeyframeAnimation animationWithKeyPath:@"position"];
     outTransition.path = pathTransitionOut;
     outTransition.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
-    outTransition.duration = 0.5;
+    outTransition.duration = 0.35;
 
     CFRelease(pathTransitionOut);
 
     // Setup animation that transitions the new controller image in
     CGMutablePathRef pathTransitionIn = CGPathCreateMutable();
     CGPathMoveToPoint(pathTransitionIn, NULL, 0.0f, 450.0f);
-    CGPathAddLineToPoint(pathTransitionIn, NULL, 0.0f, -50.0f);
     CGPathAddLineToPoint(pathTransitionIn, NULL, 0.0f, 0.0f);
 
     CAKeyframeAnimation *inTransition = [CAKeyframeAnimation animationWithKeyPath:@"position"];
     inTransition.path = pathTransitionIn;
     inTransition.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
-    inTransition.duration = 0.5;
+    inTransition.duration = 0.35;
 
     CFRelease(pathTransitionIn);
 
     [CATransaction begin];
     [CATransaction setCompletionBlock:^{
-        if(_controllerView != nil)
-            [[self controllerContainerView] replaceSubview:_controllerView with:newControllerView];
+        if(self->_controllerView != nil)
+            [[self controllerContainerView] replaceSubview:self->_controllerView with:newControllerView];
         else
             [[self controllerContainerView] addSubview:newControllerView];
         [self setControllerView:newControllerView];
@@ -534,27 +537,33 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
 {
     [self OE_updateInputPopupButtonSelection];
 
-    OEHUDAlert *alert = [[OEHUDAlert alloc] init];
+    OEAlert *alert = [[OEAlert alloc] init];
     
     if([[OEDeviceManager sharedDeviceManager] isBluetoothEnabled])
     {
-        [alert setMessageText:NSLocalizedString(@"If there is a red button on the back battery cover, press it.\nIf not, hold down buttons ①+②.", @"")];
-        [alert setDefaultButtonTitle:NSLocalizedString(@"Start Scanning", @"")];
-        [alert setAlternateButtonTitle:NSLocalizedString(@"Cancel", @"")];
-        [alert setHeadlineText:NSLocalizedString(@"Make your Wiimote discoverable", @"")];
+        alert.messageText = NSLocalizedString(@"Make your Wiimote discoverable", @"");
+        alert.informativeText = NSLocalizedString(@"If there is a red button on the back battery cover, press it.\nIf not, hold down buttons ①+②.", @"");
+        alert.defaultButtonTitle = NSLocalizedString(@"Start Scanning", @"");
+        alert.alternateButtonTitle = NSLocalizedString(@"Cancel", @"");
+        alert.otherButtonTitle = NSLocalizedString(@"Learn More", @"");
 
-        if([alert runModal])
+        NSUInteger result = [alert runModal];
+        if(result == NSAlertFirstButtonReturn)
         {
             // Start WiiRemote support
             if([[NSUserDefaults standardUserDefaults] boolForKey:OEWiimoteSupportEnabled])
                 [[OEDeviceManager sharedDeviceManager] startWiimoteSearch];
         }
+        else if(result == NSAlertThirdButtonReturn)
+        {
+            [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:@"https://github.com/OpenEmu/OpenEmu/wiki/User-guide:-Wiimote-and-Wii-U-Pro-pairing"]];
+        }
     }
     else
     {
-        [alert setMessageText:NSLocalizedString(@"Bluetooth must be enabled to pair a Wii controller.", @"")];
-        [alert setDefaultButtonTitle:NSLocalizedString(@"OK", @"")];
-        [alert setHeadlineText:NSLocalizedString(@"Bluetooth Not Enabled", @"")];
+        alert.messageText = NSLocalizedString(@"Bluetooth Not Enabled", @"");
+        alert.informativeText = NSLocalizedString(@"Bluetooth must be enabled to pair a Wii controller.", @"");
+        alert.defaultButtonTitle = NSLocalizedString(@"OK", @"");
         [alert runModal];
     }
 }
@@ -607,15 +616,16 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
     // Ignore any off state events
     if([anEvent hasOffState] || [self selectedKey] == nil) return;
 
-    if([anEvent isEscapeKeyEvent])
-    {
-        [[self currentPlayerBindings] removeEventForKeyWithName:[self selectedKey]];
-        return;
-    }
-
     [self OE_setCurrentBindingsForEvent:anEvent];
 
     id assignedKey = [[self currentPlayerBindings] assignEvent:anEvent toKeyWithName:[self selectedKey]];
+
+    // automatically selecting the next button confuses VoiceOver
+    if (NSWorkspace.sharedWorkspace.isVoiceOverEnabled)
+    {
+        [self changeInputControl:self.controlsSetupView];
+        return;
+    }
 
     if([assignedKey isKindOfClass:[OEKeyBindingGroupDescription class]])
         [[self controlsSetupView] selectNextKeyAfterKeys:[assignedKey keyNames]];
@@ -627,6 +637,11 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
 
 - (void)keyDown:(NSEvent *)theEvent
 {
+    if ([self selectedKey] == nil)
+        return;
+    
+    if ([theEvent keyCode] == kVK_Escape)
+        [[self currentPlayerBindings] removeEventForKeyWithName:[self selectedKey]];
 }
 
 - (void)keyUp:(NSEvent *)theEvent
@@ -639,6 +654,8 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
         [self registerEvent:anEvent];
 }
 
+// Only one event can be managed at a time, all events should be ignored until the currently read event went back to its null state
+// All ignored events are stored until they go back to the null state
 - (BOOL)OE_shouldRegisterEvent:(OEHIDEvent *)anEvent;
 {
     // The event is the currently read event,
@@ -664,9 +681,13 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
         return NO;
     }
 
+    // Esc-key events are handled through NSEvent
+    if ([anEvent isEscapeKeyEvent])
+        return NO;
+
     // Ignore keyboard events if the user hasn’t explicitly chosen to configure
     // keyboard bindings. See https://github.com/OpenEmu/OpenEmu/issues/403
-    if([anEvent type] == OEHIDEventTypeKeyboard && ![self isKeyboardEventSelected] && ![anEvent isEscapeKeyEvent])
+    if([anEvent type] == OEHIDEventTypeKeyboard && ![self isKeyboardEventSelected])
         return NO;
 
     // No event currently read, if it's not off state, store it and read it
@@ -742,35 +763,34 @@ static CFHashCode _OEHIDEventHashSetCallback(OEHIDEvent *value)
     return [NSImage imageNamed:@"controls_tab_icon"];
 }
 
-- (NSString *)title
+- (NSString *)panelTitle
 {
     return @"Controls";
 }
 
-- (NSString *)localizedTitle
+- (NSString *)localizedPanelTitle
 {
-    return NSLocalizedString([self title], @"Preferences: Controls Toolbar Item");
+    return NSLocalizedString([self panelTitle], @"Preferences: Controls Toolbar Item");
 }
 
 - (NSSize)viewSize
 {
-    return NSMakeSize(755, 450);
-}
-
-- (NSColor *)toolbarSeparationColor
-{
-    return [NSColor colorWithDeviceWhite:0.32 alpha:1.0];
+    if([NSUserDefaults.standardUserDefaults integerForKey:OEControlsPrefsAppearancePreferenceKey] == OEControlsPrefsAppearancePreferenceValueWood)
+        return NSMakeSize(755, 450);
+    else
+        return NSMakeSize(760, 450);
 }
 
 #pragma mark -
-- (void)OE_preparePaneWithNotification:(NSNotification *)notification
+
+- (void)preparePaneWithNotification:(NSNotification *)notification
 {
     NSDictionary *userInfo = [notification userInfo];
-    NSString     *paneName = [userInfo valueForKey:OEPreferencesUserInfoPanelNameKey];
+    NSString     *paneName = [userInfo valueForKey:[OEPreferencesWindowController userInfoPanelNameKey]];
 
-    if([paneName isNotEqualTo:[self title]]) return;
+    if([paneName isNotEqualTo:[self panelTitle]]) return;
 
-    NSString *systemIdentifier = [userInfo valueForKey:OEPreferencesUserInfoSystemIdentifierKey];
+    NSString *systemIdentifier = [userInfo valueForKey:[OEPreferencesWindowController userInfoSystemIdentifierKey]];
     NSUInteger itemIndex = -1;
     for(NSUInteger i = 0; i < [[[self consolesPopupButton] itemArray] count]; i++)
     {

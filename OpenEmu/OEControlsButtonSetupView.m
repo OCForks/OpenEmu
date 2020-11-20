@@ -24,24 +24,13 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Quartz/Quartz.h>
-
 #import "OEControlsButtonSetupView.h"
-
-#import "OEControlsKeyButton.h"
-#import "OEControlsKeyLabelCell.h"
-#import "OEControlsKeyHeadlineCell.h"
-#import "OEControlsKeySeparatorView.h"
-#import "OEControlsSectionTitleView.h"
-
-#import "NSClipView+OEAnimatedScrolling.h"
-
-#import "OEUIDrawingUtils.h"
 
 #import <OpenEmuSystem/OpenEmuSystem.h>
 
-#import "NSArray+OEAdditions.h"
-#import "OEUtilities.h"
+#import "OpenEmu-Swift.h"
+
+@import Quartz;
 
 NSString * const OEControlsButtonHighlightRollsOver = @"ButtonHighlightRollsOver";
 
@@ -71,12 +60,6 @@ static void *const _OEControlsSetupViewFrameSizeContext = (void *)&_OEControlsSe
 {
     self = [super initWithFrame:frame];
     return self;
-}
-
-- (void)setFrame:(NSRect)frameRect
-{
-    frameRect.size.width = MIN(frameRect.size.width, [self visibleRect].size.width);
-    [super setFrame:frameRect];
 }
 
 - (void)setupWithControlList:(NSArray *)controlList;
@@ -124,10 +107,10 @@ static void *const _OEControlsSetupViewFrameSizeContext = (void *)&_OEControlsSe
         
         selectedKey = [value copy];
 
-        [previous setState:NSOffState];
-        [button   setState:NSOnState];
+        [previous setState:NSControlStateValueOff];
+        [button   setState:NSControlStateValueOn];
 
-        if(value)
+        if(value && !NSWorkspace.sharedWorkspace.isVoiceOverEnabled)
         {
             // Scroll field into view
             NSClipView *clipView             = [[self enclosingScrollView] contentView];
@@ -149,7 +132,7 @@ static const CGFloat leftGap             =  16.0;
 static const CGFloat itemHeight          =  24.0;
 static const CGFloat verticalItemSpacing =   9.0; // item bottom to top
 static const CGFloat labelButtonSpacing  =   5.0;
-static const CGFloat buttonWidth         = 136.0;
+static const CGFloat buttonWidth         = 130.0;
 static const CGFloat minimumFrameHeight  = 259.0;
 
 static const CGFloat sectionTitleHeight  =  25.0;
@@ -172,19 +155,17 @@ NSComparisonResult headerSortingFunction(id obj1, id obj2, void *context)
     for(NSDictionary *section in sections)
     {
         OEControlsSectionTitleView *heading = [section objectForKey:@"header"];
-        [heading setAction:@selector(toggleSection:)];
-        [heading setTarget:self];
         [self addSubview:heading];
 
         NSArray *groups = [section objectForKey:@"groups"];
         for(NSArray *group in groups)
             for(NSUInteger j = 0; j < [group count]; j += 2)
             {
-                NSView *item = [group objectAtIndex:j];
+                id item = [group objectAtIndex:j];
                 [self addSubview:item];
                 
                 // handle headline cell
-                if([item isKindOfClass:[NSTextField class]] && [[(NSControl*)item cell] isKindOfClass:[OEControlsKeyHeadlineCell class]])
+                if([item isKindOfClass:[OEControlsKeyHeadline class]])
                 {
                     j--;
                     continue;
@@ -209,15 +190,7 @@ NSComparisonResult headerSortingFunction(id obj1, id obj2, void *context)
 
 - (void)layoutSubviews:(BOOL)animated
 {
-    // Disable animations if running on lion
-    int majorVersion, minorVersion;
-    if(GetSystemVersion(&majorVersion, &minorVersion, NULL) && majorVersion == 10 && minorVersion == 7)
-    {
-        animated = NO;
-    }
-    
 #define animated(_X_) animated?[_X_ animator]:_X_
-#define reflectSectionState(_ITEM_, _RECT_) if(sectionCollapsed){[_ITEM_ setAlphaValue:0.0];_RECT_.origin.y = headerOrigin.y; _RECT_.size.height=sectionTitleHeight; }else{[_ITEM_ setAlphaValue:1.0];}
     if(animated) [CATransaction begin];
 
     CGFloat rightGap = 14 + (([NSScroller preferredScrollerStyle] == NSScrollerStyleLegacy) ? 14.0 : 0.0);
@@ -234,9 +207,7 @@ NSComparisonResult headerSortingFunction(id obj1, id obj2, void *context)
     CGFloat y = NSHeight(frame);
     for(NSDictionary *section in sections)
     {
-        CGFloat previousY = y;
         OEControlsSectionTitleView *heading = animated([section objectForKey:@"header"]);
-        BOOL sectionCollapsed = ![heading state];
         NSArray *groups       = [section objectForKey:@"groups"];
 
         // layout section header
@@ -253,12 +224,11 @@ NSComparisonResult headerSortingFunction(id obj1, id obj2, void *context)
                 id item = animated([group objectAtIndex:j]);
 
                 // handle headline cell
-                if([item isKindOfClass:[NSTextField class]] && [[item cell] isKindOfClass:[OEControlsKeyHeadlineCell class]])
+                if([item isKindOfClass:[OEControlsKeyHeadline class]])
                 {
                     j--;
 
                     NSRect headlineFrame = (NSRect){{leftGap, y - itemHeight }, { width - leftGap - rightGap, itemHeight }};
-                    reflectSectionState(item, headlineFrame);
                     [item setFrame:NSIntegralRect(headlineFrame)];
                     y -= itemHeight + verticalItemSpacing;
 
@@ -271,7 +241,6 @@ NSComparisonResult headerSortingFunction(id obj1, id obj2, void *context)
                     j--;
 
                     NSRect seperatorLineRect = (NSRect){{ leftGap, y - itemHeight }, { width - leftGap - rightGap, itemHeight }};
-                    reflectSectionState(item, seperatorLineRect);
                     [item setFrame:NSIntegralRect(seperatorLineRect)];
                     y -= itemHeight + verticalItemSpacing;
 
@@ -280,19 +249,23 @@ NSComparisonResult headerSortingFunction(id obj1, id obj2, void *context)
 
                 // handle buttons + label
                 NSRect buttonRect = (NSRect){{ width - buttonWidth, y - itemHeight },{ buttonWidth - rightGap, itemHeight }};
-                reflectSectionState(item, buttonRect);
                 [item setFrame:NSIntegralRect(buttonRect)];
 
                 NSTextField *label = animated([group objectAtIndex:j + 1]);
-                NSRect labelRect = NSIntegralRect(NSMakeRect(leftGap, buttonRect.origin.y - 4, width - leftGap - labelButtonSpacing - buttonWidth, itemHeight));
+                NSRect labelRect = NSIntegralRect(NSMakeRect(leftGap, buttonRect.origin.y + buttonRect.size.height/2 + 1, width - leftGap - labelButtonSpacing - buttonWidth, 100000));
                 
-                BOOL multiline = [label.stringValue sizeWithAttributes:@{NSFontAttributeName: label.font}].width + 5 >= labelRect.size.width;
-                if(multiline)
+                NSSize labelFitSize = [label.cell cellSizeForBounds:labelRect];
+                if (labelFitSize.height > 30)
                 {
-                    labelRect.size.height += 10;
-                    labelRect.origin.y    -= 3;
+                    /* If the label size returned is too tall, enlarge the
+                     * label to attempt fitting in 2 lines anyway */
+                    labelRect.origin.x -= 5;
+                    labelRect.size.width += 5;
+                    labelFitSize = [label.cell cellSizeForBounds:labelRect];
                 }
-                reflectSectionState(label, labelRect);
+                labelRect.origin.y -= labelFitSize.height / 2;
+                labelRect.size.height = labelFitSize.height;
+                
                 [label setFrame:labelRect];
                 
                 y -= itemHeight + verticalItemSpacing;
@@ -300,14 +273,11 @@ NSComparisonResult headerSortingFunction(id obj1, id obj2, void *context)
         }
         y += verticalItemSpacing;
         y -= bottomGap;
-
-        if(sectionCollapsed) y = previousY - sectionTitleHeight;
     }
 
     [self layoutSectionHeadings:nil];
 
-    if(animated) [CATransaction flush];
-#undef hideBehindSectionTitle
+    if(animated) [CATransaction commit];
 #undef animated
 }
 
@@ -325,12 +295,9 @@ NSComparisonResult headerSortingFunction(id obj1, id obj2, void *context)
 {
     CGFloat height = sectionTitleHeight;
     
-    if([(OEControlsSectionTitleView*)[section objectForKey:@"header"] state]) // heading not collapsed
-    {
-        height += topGap+bottomGap;
-        NSUInteger numberOfRows = [[section objectForKey:@"numberOfRows"] unsignedIntegerValue];
-        height += (numberOfRows - 1) * verticalItemSpacing + numberOfRows * itemHeight;
-    }
+    height += topGap+bottomGap;
+    NSUInteger numberOfRows = [[section objectForKey:@"numberOfRows"] unsignedIntegerValue];
+    height += (numberOfRows - 1) * verticalItemSpacing + numberOfRows * itemHeight;
     
     return height;
 }
@@ -364,7 +331,7 @@ NSComparisonResult headerSortingFunction(id obj1, id obj2, void *context)
     for(i=[sections count]-1; i>=0; i--)
     {
         NSDictionary *section = [sections objectAtIndex:i];
-        id sectionHeader      = [section objectForKey:@"header"];
+        OEControlsSectionTitleView *sectionHeader = [section objectForKey:@"header"];
 
         CGFloat sectionStart  = [self OE_headerPositionOfSectionAtIndex:i];
         CGFloat sectionHeight = [self OE_calculateHeightOfSection:section];
@@ -415,8 +382,6 @@ NSComparisonResult headerSortingFunction(id obj1, id obj2, void *context)
     else
     {
         newKey = [orderedKeys objectAtIndex:i + 1];
-        if(![self OE_sectionOfKeyIsExpanded:newKey])
-            newKey = [[NSUserDefaults standardUserDefaults] boolForKey:OEControlsButtonHighlightRollsOver] ? [orderedKeys objectAtIndex:0] : nil;
     }
 
     [CATransaction begin];
@@ -442,8 +407,6 @@ NSComparisonResult headerSortingFunction(id obj1, id obj2, void *context)
     }
     else {
         newKey = [orderedKeys objectAtIndex:i + 1];
-        if(![self OE_sectionOfKeyIsExpanded:newKey])
-            newKey = [[NSUserDefaults standardUserDefaults] boolForKey:OEControlsButtonHighlightRollsOver] ? [orderedKeys objectAtIndex:0] : nil;
     }
 
     [CATransaction begin];
@@ -462,11 +425,6 @@ NSComparisonResult headerSortingFunction(id obj1, id obj2, void *context)
     return nil;
 }
 
-- (BOOL)OE_sectionOfKeyIsExpanded:(NSString*)key
-{
-    NSDictionary *section = [self OE_sectionOfKey:key];
-    return [(OEControlsSectionTitleView*)[section objectForKey:@"header"] state];
-}
 #pragma mark -
 
 - (void)scrollWheel:(NSEvent *)theEvent
@@ -510,7 +468,7 @@ NSComparisonResult headerSortingFunction(id obj1, id obj2, void *context)
 - (void)OE_addGroupLabel:(NSString*)label;
 - (void)OE_addRowSeperator;
 - (void)OE_addGroup;
-- (id)OE_createSectionHeadingWithName:(NSString*)name collapsible:(BOOL)flag;
+- (id)OE_createSectionHeadingWithName:(NSString*)name;
 @end
 
 @implementation _OEControlsSetupViewParser
@@ -568,7 +526,7 @@ NSComparisonResult headerSortingFunction(id obj1, id obj2, void *context)
                     NSString *label = NSLocalizedStringFromTable([row objectForKey:OEControlListKeyLabelKey], @"ControlLabels", @"Button Label");
 
                     [self OE_addButtonWithName:[row objectForKey:OEControlListKeyNameKey]
-                                         label:[label stringByAppendingString:@":"] fontFamily:fontFamily];
+                                         label:[label stringByAppendingString:@":"]];
                 }
             }
         }
@@ -578,7 +536,7 @@ NSComparisonResult headerSortingFunction(id obj1, id obj2, void *context)
         [sections addObject:@{
          @"numberOfRows" : @(numberOfRows),
                @"groups" : elementGroups,
-              @"header" : [self OE_createSectionHeadingWithName:sectionTitle collapsible:i!=0]
+              @"header" : [self OE_createSectionHeadingWithName:sectionTitle]
          }];
         
         elementGroups = [[NSMutableArray alloc] init];
@@ -604,40 +562,27 @@ NSComparisonResult headerSortingFunction(id obj1, id obj2, void *context)
 
 - (void)OE_addButtonWithName:(NSString *)aName label:(NSString *)aLabel;
 {
-    [self OE_addButtonWithName:aName label:aLabel fontFamily:nil];
-}
-
-- (void)OE_addButtonWithName:(NSString *)aName label:(NSString *)aLabel fontFamily:(NSString*)fontFamily
-{
     OEControlsKeyButton *button = [[OEControlsKeyButton alloc] initWithFrame:NSZeroRect];
     
     [button setTarget:target];
     [button setAction:@selector(OE_selectInputControl:)];
+    button.label = aLabel;
     
     [orderedKeys    addObject:aName];
     [keyToButtonMap setObject:button forKey:aName];
     
     [currentGroup addObject:button];
     
-    NSTextField     *labelField     = [[NSTextField alloc] initWithFrame:NSZeroRect];
-    OEControlsKeyLabelCell *labelFieldCell = [[OEControlsKeyLabelCell alloc] init];
+    OEControlsKeyLabel *labelField = [[OEControlsKeyLabel alloc] initWithFrame:NSZeroRect];
 
-    [labelField setCell:labelFieldCell];
     [labelField setStringValue:aLabel];
-
-    if(fontFamily != nil)
-    {
-        [labelFieldCell setFontFamily:fontFamily];
-    }
 
     [currentGroup addObject:labelField];
 }
 
 - (void)OE_addGroupLabel:(NSString *)label;
 {
-    NSTextField *labelField = [[NSTextField alloc] initWithFrame:NSZeroRect];
-    NSTextFieldCell *labelFieldCell = [[OEControlsKeyHeadlineCell alloc] init];
-    [labelField setCell:labelFieldCell];
+    OEControlsKeyHeadline *labelField = [[OEControlsKeyHeadline alloc] initWithFrame:NSZeroRect];
     [labelField setStringValue:label];
     [currentGroup addObject:labelField];
 }
@@ -657,12 +602,10 @@ NSComparisonResult headerSortingFunction(id obj1, id obj2, void *context)
     currentGroup = [[NSMutableArray alloc] init];
 }
 
-- (id)OE_createSectionHeadingWithName:(NSString*)name collapsible:(BOOL)flag
+- (id)OE_createSectionHeadingWithName:(NSString*)name
 {
     OEControlsSectionTitleView *labelField = [[OEControlsSectionTitleView alloc] initWithFrame:NSZeroRect];
     [labelField setStringValue:name];
-    [labelField setCollapsible:flag];
-    if(flag) [labelField setState:NSOffState];
 
     return labelField;
 }

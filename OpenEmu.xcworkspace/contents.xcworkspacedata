@@ -5,6 +5,12 @@
       location = "container:OpenEmu/OpenEmu.xcodeproj">
    </FileRef>
    <FileRef
+      location = "group:OpenEmuKit/OpenEmuKit.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:OpenEmu-Shaders/OpenEmuShaders.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:OpenEmu-SDK/OpenEmu-SDK.xcodeproj">
    </FileRef>
    <FileRef
@@ -20,6 +26,9 @@
       location = "group:blueMSX/blueMSX.xcodeproj">
    </FileRef>
    <FileRef
+      location = "group:BSNES/BSNES.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:CrabEmu/CrabEmu.xcodeproj">
    </FileRef>
    <FileRef
@@ -32,19 +41,16 @@
       location = "group:GenesisPlus/GenesisPlus.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:Higan/Higan.xcodeproj">
+      location = "group:UME/MAME.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:UME/MAME.xcodeproj">
+      location = "group:mGBA/mGBA.xcodeproj">
    </FileRef>
    <FileRef
       location = "group:Mednafen/Mednafen.xcodeproj">
    </FileRef>
    <FileRef
       location = "group:Mupen64Plus/Mupen64Plus.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:NeoPop/NeoPop.xcodeproj">
    </FileRef>
    <FileRef
       location = "group:Nestopia/Nestopia.xcodeproj">
@@ -54,6 +60,9 @@
    </FileRef>
    <FileRef
       location = "group:picodrive/Picodrive.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:PokeMini/PokeMini.xcodeproj">
    </FileRef>
    <FileRef
       location = "group:Potator-Core/Potator.xcodeproj">
@@ -71,18 +80,9 @@
       location = "group:Stella/Stella.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:TwoMbit/TwoMbit.xcodeproj">
-   </FileRef>
-   <FileRef
       location = "group:VecXGL/VecXGL.xcodeproj">
    </FileRef>
    <FileRef
       location = "group:VirtualJaguar/VirtualJaguar.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:VisualBoyAdvance/VisualBoyAdvance.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:yabause/yabause/Yabause.xcodeproj">
    </FileRef>
 </Workspace>

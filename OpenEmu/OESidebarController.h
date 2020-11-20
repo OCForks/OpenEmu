@@ -24,28 +24,30 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Foundation/Foundation.h>
-
+@import Cocoa;
 #import "OESidebarOutlineView.h"
 
-extern NSString *const OESuppressRemoveCollectionConfirmationKey;
+NS_ASSUME_NONNULL_BEGIN
+
+extern NSNotificationName const OESidebarSelectionDidChangeNotification;
 
 extern NSString *const OESidebarMinWidth;
 extern NSString *const OESidebarMaxWidth;
 extern NSString *const OEMainViewMinWidth;
 
-@class OELibraryDatabase, OESidebarOutlineView;
+@class OELibraryDatabase, OEDBCollection;
 @protocol OEGameCollectionViewItemProtocol;
 @protocol OESidebarItem;
 
 @interface OESidebarController : NSViewController <NSOutlineViewDelegate, NSOutlineViewDataSource>
 
-- (IBAction)addCollectionAction:(id)sender;
+- (IBAction)addCollectionAction:(nullable id)sender;
 
 - (void)setEnabled:(BOOL)enabled;
 
 - (void)reloadData;
 - (id)addCollection:(BOOL)isSmart;
+- (OEDBCollection *)addCollection;
 - (id)duplicateCollection:(id)originalCollection;
 
 - (void)selectItem:(id)item;
@@ -59,11 +61,13 @@ extern NSString *const OEMainViewMinWidth;
 
 - (void)changeDefaultCore:(id)sender;
 
-- (id<OESidebarItem>)selectedSidebarItem;
+@property (nonatomic, readonly, nullable) id<OESidebarItem> selectedSidebarItem;
 
 @property (strong) OESidebarOutlineView *view;
-@property (strong, nonatomic) OELibraryDatabase *database;
+@property (strong, nonatomic, nullable) OELibraryDatabase *database;
 @property (strong, readonly) NSArray *groups;
-@property (strong, readonly) NSArray *systems, *collections, *media;
-@property (nonatomic, strong, readwrite) id editingItem;
+@property (strong, readonly) NSArray *systems, *collections;
+@property (nonatomic, strong, readwrite, nullable) id editingItem;
 @end
+
+NS_ASSUME_NONNULL_END

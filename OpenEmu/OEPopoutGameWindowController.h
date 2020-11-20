@@ -24,12 +24,10 @@
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Cocoa/Cocoa.h>
-#import "OEGameIntegralScalingDelegate.h"
+@import Cocoa;
+#import "OpenEmu-Swift.h"
 
-@class OEGameDocument;
-
-@interface OEPopoutGameWindowController : NSWindowController <NSWindowDelegate, OEGameIntegralScalingDelegate>
+@interface OEPopoutGameWindowController : NSWindowController <NSWindowDelegate, OEGameIntegralScalingDelegate, NSMenuItemValidation>
 
 @property(getter=isWindowFullScreen) BOOL windowFullScreen;
 

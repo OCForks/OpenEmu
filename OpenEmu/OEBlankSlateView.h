@@ -24,10 +24,10 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#import <Cocoa/Cocoa.h>
-#import "OESystemPlugin.h"
-#import "OEBlankSlateBackgroundView.h"
+@import Cocoa;
 @class OEBlankSlateView;
+
+extern NSString * const OECDBasedGamesUserGuideURLString;
 
 @protocol OEBlankSlateViewDelegate <NSObject>
 @optional
@@ -36,7 +36,7 @@
 - (BOOL)blankSlateView:(OEBlankSlateView *)gridView acceptDrop:(id<NSDraggingInfo>)sender;
 @end
 
-@interface OEBlankSlateView : OEBlankSlateBackgroundView
+@interface OEBlankSlateView : NSView
 @property (nonatomic) id representedObject;
 @property (assign) id <OEBlankSlateViewDelegate> delegate;
 @property (readonly, strong) NSView *containerView;

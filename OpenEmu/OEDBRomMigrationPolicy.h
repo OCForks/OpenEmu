@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2012, OpenEmu Team
+ Copyright (c) 2015, OpenEmu Team
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -24,8 +24,12 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <CoreData/CoreData.h>
+@import CoreData;
 
-@interface OEDBRomMigrationPolicy : NSEntityMigrationPolicy
+NS_ASSUME_NONNULL_BEGIN
 
+@interface OEDBRomMigrationPolicy: NSEntityMigrationPolicy
 @end
+
+NS_ASSUME_NONNULL_END
+

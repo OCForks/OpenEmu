@@ -26,24 +26,23 @@
 
 #import "OEPopoutGameWindowController.h"
 
-#import "OEHUDWindow.h"
+#import "OEMainWindowController.h"
 #import "OEGameDocument.h"
 #import "OEGameViewController.h"
-#import "OEGameView.h"
 #import "OEGameControlsBar.h"
-#import "NSViewController+OEAdditions.h"
-#import "NSWindow+OEFullScreenAdditions.h"
-#import <QuartzCore/QuartzCore.h>
 #import "OEUtilities.h"
 
 #import "OEDBRom.h"
 #import "OEDBGame.h"
-#import "OEDBSystem.h"
+#import "OEDBSystem+CoreDataProperties.h"
+
+@import QuartzCore;
+
+#import "OpenEmu-Swift.h"
 
 #pragma mark - Private variables
 
 static const NSSize       _OEPopoutGameWindowMinSize = {100, 100};
-static const NSSize       _OEScreenshotWindowMinSize = {100, 100};
 static const unsigned int _OEFitToWindowScale        = 0;
 
 // User defaults
@@ -51,19 +50,19 @@ static NSString *const _OESystemIntegralScaleKeyFormat = @"OEIntegralScale.%@";
 static NSString *const _OEIntegralScaleKey             = @"integralScale";
 static NSString *const _OELastWindowSizeKey            = @"lastPopoutWindowSize";
 
-typedef enum
+typedef NS_ENUM(NSInteger, OEPopoutGameWindowFullScreenStatus)
 {
     _OEPopoutGameWindowFullScreenStatusNonFullScreen = 0,
     _OEPopoutGameWindowFullScreenStatusFullScreen,
     _OEPopoutGameWindowFullScreenStatusEntering,
     _OEPopoutGameWindowFullScreenStatusExiting,
-} OEPopoutGameWindowFullScreenStatus;
+};
 
 
 
 @interface OEScreenshotWindow : NSWindow
 @property(nonatomic, unsafe_unretained) NSImageView *screenshotView;
-@property(nonatomic, unsafe_unretained) NSImage     *screenshot;
+- (void)setScreenshot:(NSImage *)screenshot;
 @end
 
 
@@ -74,10 +73,15 @@ typedef enum
     unsigned int                        _integralScale;
 
     // Full screen
-    NSRect                              _frameForNonFullScreenMode;
     OEScreenshotWindow                 *_screenshotWindow;
     OEPopoutGameWindowFullScreenStatus  _fullScreenStatus;
     BOOL                                _resumePlayingAfterFullScreenTransition;
+    BOOL                                _snapResize;
+    BOOL                                _shouldSnapResize;
+    OEIntegralWindowResizingDelegate   *_snapDelegate;
+    // State prior to entering full screen
+    NSRect                              _windowedFrame;
+    unsigned int                        _windowedIntegralScale;
 }
 
 #pragma mark - NSWindowController overridden methods
@@ -88,21 +92,53 @@ typedef enum
     if(!self)
         return nil;
 
+    _snapDelegate = [OEIntegralWindowResizingDelegate new];
+    
+    [NSUserDefaults.standardUserDefaults addObserver:self
+                                          forKeyPath:OEPopoutGameWindowIntegerScalingOnlyKey
+                                             options:NSKeyValueObservingOptionNew
+                                             context:NULL];
+    
+    if ([NSUserDefaults.standardUserDefaults boolForKey:OEPopoutGameWindowIntegerScalingOnlyKey])
+        _shouldSnapResize = YES;
+    else
+        _shouldSnapResize = NO;
+    
     [window setDelegate:self];
     [window setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
     [window setAnimationBehavior:NSWindowAnimationBehaviorDocumentWindow];
     [window setMinSize:_OEPopoutGameWindowMinSize];
+    window.tabbingMode = NSWindowTabbingModeDisallowed;
+    
+    NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
+    NSString *bgColorStr = [ud objectForKey:OEGameViewBackgroundColorKey];
+    NSColor *bgColor = bgColorStr ? [[NSColor alloc] colorFromHexString:bgColorStr] : [NSColor blackColor];
+    window.backgroundColor = bgColor;
+    
+    if([ud boolForKey:OEPopoutGameWindowAlwaysOnTopKey] == YES)
+    {
+        window.level = NSFloatingWindowLevel;
+    }
 
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(OE_constrainIntegralScaleIfNeeded) name:NSApplicationDidChangeScreenParametersNotification object:nil];
 
     return self;
 }
 
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object
+    change:(NSDictionary<NSKeyValueChangeKey, id> *)change context:(void *)context
+{
+    if (object == NSUserDefaults.standardUserDefaults && [keyPath isEqualToString:OEPopoutGameWindowIntegerScalingOnlyKey])
+        _shouldSnapResize = _shouldSnapResize ? NO : YES;
+    else
+        [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
+}
+
 - (void)dealloc
 {
     [[self window] setDelegate:nil];
     [self setWindow:nil];
-    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [NSUserDefaults.standardUserDefaults removeObserver:self forKeyPath:OEPopoutGameWindowIntegerScalingOnlyKey];
 }
 
 - (BOOL)windowShouldClose:(id)sender
@@ -126,28 +162,30 @@ typedef enum
         NSNumber *lastScaleNumber                = [integralScaleInfo objectForKey:_OEIntegralScaleKey];
         NSSize windowSize;
 
-        _integralScale = ([lastScaleNumber respondsToSelector:@selector(unsignedIntValue)] ?
-                          MIN([lastScaleNumber unsignedIntValue], maxScale) :
-                          maxScale);
+        unsigned int lastScale = ([lastScaleNumber respondsToSelector:@selector(unsignedIntValue)] ?
+                                  MIN([lastScaleNumber unsignedIntValue], maxScale) :
+                                  maxScale);
 
-        if(_integralScale == _OEFitToWindowScale)
+        if(lastScale == _OEFitToWindowScale)
         {
             windowSize = NSSizeFromString([integralScaleInfo objectForKey:_OELastWindowSizeKey]);
             if(windowSize.width == 0 || windowSize.height == 0)
                 windowSize = [self OE_windowSizeForGameViewIntegralScale:maxScale];
         }
         else
-            windowSize = [self OE_windowSizeForGameViewIntegralScale:_integralScale];
+            windowSize = [self OE_windowSizeForGameViewIntegralScale:lastScale];
 
-        OEHUDWindow *window     = (OEHUDWindow *)[self window];
+        NSWindow *window        = self.window;
         const NSRect windowRect = {NSZeroPoint, windowSize};
 
         [gameViewController setIntegralScalingDelegate:self];
 
+        window.contentViewController = gameViewController;
         [window setFrame:windowRect display:NO animate:NO];
         [window center];
-        [window setContentAspectRatio:[gameViewController defaultScreenSize]];
-        [window setMainContentView:[gameViewController view]];
+        [window setContentAspectRatio:gameViewController.defaultScreenSize];
+        
+        _integralScale = lastScale;
 
         [self OE_buildScreenshotWindow];
     }
@@ -160,8 +198,6 @@ typedef enum
 
     if(![window isVisible])
     {
-        OEGameViewController *gameViewController = [[self OE_gameDocument] gameViewController];
-
         // We disable window animation if we need to toggle full screen because two parallel animations
         // (window being ordered front and toggling full-screen) looks painfully ugly. The animation
         // behaviour is restored in -windowDidExitFullScreen:.
@@ -169,13 +205,38 @@ typedef enum
             [window setAnimationBehavior:NSWindowAnimationBehaviorNone];
         
         [window makeKeyAndOrderFront:sender];
-
-        [gameViewController viewWillAppear];
-        [gameViewController viewDidAppear];
     }
 
     if(needsToggleFullScreen)
         [window toggleFullScreen:self];
+}
+
+#pragma mark - Menu Items
+
+- (BOOL)validateMenuItem:(NSMenuItem *)menuItem
+{
+    SEL action = menuItem.action;
+    if(action == @selector(floatOnTop:))
+    {
+        if(self.window.level == NSFloatingWindowLevel)
+            menuItem.state = NSControlStateValueOn;
+        else
+            menuItem.state = NSControlStateValueOff;
+    }
+    
+    return YES;
+}
+
+- (IBAction)floatOnTop:(NSMenuItem *)sender
+{
+    if(self.window.level == NSNormalWindowLevel)
+    {
+        self.window.level = NSFloatingWindowLevel;
+    }
+    else
+    {
+        self.window.level = NSNormalWindowLevel;
+    }
 }
 
 #pragma mark - Actions
@@ -199,7 +260,7 @@ typedef enum
 - (unsigned int)maximumIntegralScale
 {
     NSScreen *screen            = ([[self window] screen] ? : [NSScreen mainScreen]);
-    const NSSize maxContentSize = [OEHUDWindow mainContentRectForFrameRect:[screen visibleFrame]].size;
+    const NSSize maxContentSize = [self.window contentRectForFrameRect:screen.visibleFrame].size;
     const NSSize defaultSize    = [[[self OE_gameDocument] gameViewController] defaultScreenSize];
     const unsigned int maxScale = MAX(MIN(floor(maxContentSize.height / defaultSize.height), floor(maxContentSize.width / defaultSize.width)), 1);
 
@@ -208,12 +269,12 @@ typedef enum
 
 - (unsigned int)currentIntegralScale
 {
-    return [[self window] isFullScreen] ? _OEFitToWindowScale : _integralScale;
+    return _integralScale;
 }
 
 - (BOOL)shouldAllowIntegralScaling
 {
-    return ![[self window] isFullScreen];
+    return YES;
 }
 
 #pragma mark - Private methods
@@ -229,20 +290,22 @@ typedef enum
 - (NSSize)OE_windowSizeForGameViewIntegralScale:(unsigned int)gameViewIntegralScale
 {
     const NSSize contentSize = [self OE_windowContentSizeForGameViewIntegralScale:gameViewIntegralScale];
-    const NSSize windowSize  = [OEHUDWindow frameRectForMainContentRect:(NSRect){.size = contentSize}].size;
+    const NSSize windowSize  = [self.window frameRectForContentRect:(NSRect){.size = contentSize}].size;
 
     return windowSize;
 }
 
 - (void)OE_changeGameViewIntegralScale:(unsigned int)newScale
 {
-    if(_fullScreenStatus != _OEPopoutGameWindowFullScreenStatusNonFullScreen)
-        return;
+    if (_integralScale == newScale) return;
     
     _integralScale = newScale;
-
-    if(newScale != _OEFitToWindowScale)
+    
+    if (_fullScreenStatus == _OEPopoutGameWindowFullScreenStatusNonFullScreen)
     {
+        if (newScale == _OEFitToWindowScale)
+            return;
+
         const NSRect screenFrame = [[[self window] screen] visibleFrame];
         NSRect currentWindowFrame = [[self window] frame];
         NSRect newWindowFrame = { .size = [self OE_windowSizeForGameViewIntegralScale:newScale] };
@@ -258,6 +321,19 @@ typedef enum
             newWindowFrame.origin.x = NSMinX(screenFrame) + ((screenFrame.size.width - newWindowFrame.size.width) / 2);
 
         [[[self window] animator] setFrame:newWindowFrame display:YES];
+    }
+    else
+    {
+        OEGameViewController *gv = [self OE_gameDocument].gameViewController;
+        if (newScale == _OEFitToWindowScale)
+        {
+            [gv gameViewSetIntegralSize:CGSizeZero animated:YES];
+        }
+        else
+        {
+            NSSize newSize = [self OE_windowSizeForGameViewIntegralScale:newScale];
+            [gv gameViewSetIntegralSize:newSize animated:YES];
+        }
     }
 }
 
@@ -281,47 +357,24 @@ typedef enum
 
 - (void)OE_buildScreenshotWindow
 {
-    NSRect windowFrame = {.size = _OEScreenshotWindowMinSize};
     NSScreen *mainScreen                     = [[NSScreen screens] objectAtIndex:0];
     const NSRect screenFrame                 = [mainScreen frame];
     _screenshotWindow  = [[OEScreenshotWindow alloc] initWithContentRect:screenFrame
-                                                               styleMask:NSBorderlessWindowMask
+                                                               styleMask:NSWindowStyleMaskBorderless
                                                                  backing:NSBackingStoreBuffered
                                                                    defer:NO];
-    [_screenshotWindow setBackgroundColor:[NSColor clearColor]];
+    [_screenshotWindow setBackgroundColor:self.window.backgroundColor];
     [_screenshotWindow setOpaque:NO];
     [_screenshotWindow setAnimationBehavior:NSWindowAnimationBehaviorNone];
-
     
-    const NSRect  contentFrame = {NSZeroPoint, windowFrame.size};
-    NSImageView  *imageView    = [[NSImageView alloc] initWithFrame:contentFrame];
-    [[imageView cell] setImageAlignment:NSImageAlignBottomLeft];
-    [[imageView cell] setImageScaling:NSImageScaleAxesIndependently];
+    NSView *view = _screenshotWindow.contentView;
+
+    NSImageView  *imageView  = [[NSImageView alloc] initWithFrame:(NSRect){.origin = NSZeroPoint, .size = view.frame.size}];
+    imageView.imageAlignment = NSImageAlignCenter;
+    imageView.imageScaling   = NSImageScaleProportionallyUpOrDown;
     [imageView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
-    [imageView setWantsLayer:YES];
-    [imageView setLayerContentsRedrawPolicy:NSViewLayerContentsRedrawOnSetNeedsDisplay];
-    [imageView.layer setOpaque:YES];
     _screenshotWindow.screenshotView = imageView;
-
-    [_screenshotWindow setContentView:imageView];
-}
-
-- (NSRect)OE_screenshotWindowFrameForOriginalFrame:(NSRect)frame
-{
-    OEGameViewController *gameViewController    = [[self OE_gameDocument] gameViewController];
-    const NSSize          gameSize              = [gameViewController defaultScreenSize];
-    const float           widthRatio            = gameSize.width  / frame.size.width;
-    const float           heightRatio           = gameSize.height / frame.size.height;
-    const float           dominantRatioInverse  = 1 / MAX(widthRatio, heightRatio);
-    const NSSize          gameViewportSize      = OEScaleSize(gameSize, dominantRatioInverse);
-    const NSPoint         gameViewportOrigin    =
-    {
-        NSMinX(frame) + ((frame.size.width  - gameViewportSize.width ) / 2),
-        NSMinY(frame) + ((frame.size.height - gameViewportSize.height) / 2),
-    };
-    const NSRect          screenshotWindowFrame = {gameViewportOrigin, gameViewportSize};
-    
-    return screenshotWindowFrame;
+    [view addSubview:imageView];
 }
 
 - (void)OE_hideScreenshotWindow
@@ -330,29 +383,6 @@ typedef enum
 
     // Reduce the memory footprint of the screenshot window when it’s not visible
     [_screenshotWindow setScreenshot:nil];
-    [_screenshotWindow.screenshotView.layer setFrame:(NSRect){.size = _OEScreenshotWindowMinSize}];
-}
-
-- (void)OE_forceLayerReposition:(CALayer *)layer toFrame:(NSRect)frame
-{
-    // This forces the CALayer to reposition
-    // without this we see the previous state for a split second
-    CABasicAnimation *moveToPosition = [CABasicAnimation animationWithKeyPath:@"position"];
-    moveToPosition.fromValue = [NSValue valueWithPoint:frame.origin];
-    moveToPosition.toValue = [NSValue valueWithPoint:frame.origin];
-    moveToPosition.duration = 0;
-    moveToPosition.fillMode = kCAFillModeForwards;
-    moveToPosition.removedOnCompletion = NO;
-
-    CABasicAnimation *scaleToSize = [CABasicAnimation animationWithKeyPath:@"bounds.size"];
-    scaleToSize.fromValue = [NSValue valueWithSize:frame.size];
-    scaleToSize.toValue = [NSValue valueWithSize:frame.size];
-    scaleToSize.duration = 0;
-    scaleToSize.fillMode = kCAFillModeForwards;
-    scaleToSize.removedOnCompletion = NO;
-
-    [_screenshotWindow.screenshotView.layer addAnimation:moveToPosition forKey:@"moveToPosition"];
-    [_screenshotWindow.screenshotView.layer addAnimation:scaleToSize forKey:@"scaleToSize"];
 }
 
 #pragma mark - NSWindowDelegate
@@ -388,7 +418,7 @@ typedef enum
 {
     OEGameViewController *gameViewController = [[self OE_gameDocument] gameViewController];
 
-    const NSSize windowSize         = ([[self window] isFullScreen] ? _frameForNonFullScreenMode.size : [[self window] frame].size);
+    const NSSize windowSize         = ([[self window] isFullScreen] ? _windowedFrame.size : [[self window] frame].size);
     NSString *systemIdentifier      = [[[[[gameViewController document] rom] game] system] systemIdentifier];
     NSUserDefaults *userDefaults    = [NSUserDefaults standardUserDefaults];
     NSString *systemKey             = [NSString stringWithFormat:_OESystemIntegralScaleKeyFormat, systemIdentifier];
@@ -397,18 +427,54 @@ typedef enum
         _OELastWindowSizeKey : NSStringFromSize(windowSize),
     };
     [userDefaults setObject:integralScaleInfo forKey:systemKey];
-    [userDefaults synchronize]; // needed whilst AppKit isn’t fixed to synchronise defaults in -_deallocHardCore:
+}
 
-    [gameViewController viewWillDisappear];
-    [gameViewController viewDidDisappear];
+- (void)windowWillStartLiveResize:(NSNotification *)notification
+{
+    if (_fullScreenStatus != _OEPopoutGameWindowFullScreenStatusNonFullScreen)
+        return;
+    
+    BOOL shiftPressed = (NSEvent.modifierFlags & NSEventModifierFlagShift) != 0;
+    if ((_shouldSnapResize && !shiftPressed) || (!_shouldSnapResize && shiftPressed))
+    {
+        _snapResize = YES;
+    }
+    
+    if (_snapResize)
+    {
+        // necessary to prevent erratic resize behavior when window is
+        // resized via top or bottom only (Y-axis)
+        [self.window setContentAspectRatio:CGSizeZero];
+        _snapDelegate.currentScale = _integralScale;
+        _snapDelegate.screenSize = [self OE_gameDocument].gameViewController.defaultScreenSize;
+        [_snapDelegate windowWillStartLiveResize:notification];
+    }
 }
 
 - (NSSize)windowWillResize:(NSWindow *)sender toSize:(NSSize)frameSize
 {
-    _integralScale = _OEFitToWindowScale;
-    const NSSize windowSize  = [OEHUDWindow frameRectForMainContentRect:(NSRect){.size = frameSize}].size;
+    if (_fullScreenStatus != _OEPopoutGameWindowFullScreenStatusNonFullScreen) {
+        return frameSize;
+    }
+    
+    if (_snapResize) {
+        return [_snapDelegate windowWillResize:sender toSize:frameSize];
+    }
 
-    return windowSize;
+    _integralScale = _OEFitToWindowScale;
+    
+    return frameSize;
+}
+
+- (void)windowDidEndLiveResize:(NSNotification *)notification
+{
+    if (_snapResize)
+    {
+        [self.window setContentAspectRatio:[self OE_gameDocument].gameViewController.defaultScreenSize];
+        [_snapDelegate windowDidEndLiveResize:notification];
+        _integralScale = (unsigned int)_snapDelegate.currentScale;
+        _snapResize = NO;
+    }
 }
 
 - (void)cancelOperation:(id)sender
@@ -434,15 +500,25 @@ typedef enum
 {
     OEGameViewController *gameViewController = [[self OE_gameDocument] gameViewController];
 
-    _fullScreenStatus                       = _OEPopoutGameWindowFullScreenStatusEntering;
-    _frameForNonFullScreenMode              = [[self window] frame];
+    _fullScreenStatus       = _OEPopoutGameWindowFullScreenStatusEntering;
+    _windowedFrame          = self.window.frame;
+    _windowedIntegralScale  = _integralScale;
 
     _resumePlayingAfterFullScreenTransition = ![[self document] isEmulationPaused];
     [[self document] setEmulationPaused:YES];
+    
+    // move the screenshot window to the same screen as the game window
+    // otherwise it will be shown in the system full-screen animation
+    NSScreen *mainScreen = self.window.screen;
+    [_screenshotWindow setFrameOrigin:mainScreen.frame.origin];
 
-    [NSCursor hide];
     [[gameViewController controlsWindow] setCanShow:NO];
-    [[gameViewController controlsWindow] hide];
+    [[gameViewController controlsWindow] hideAnimated:YES];
+    if (_integralScale != _OEFitToWindowScale)
+    {
+        CGSize size = [self OE_windowContentSizeForGameViewIntegralScale:_integralScale];
+        [gameViewController gameViewSetIntegralSize:size animated:NO];
+    }
 }
 
 - (NSArray *)customWindowsToEnterFullScreenForWindow:(NSWindow *)window
@@ -453,59 +529,49 @@ typedef enum
 - (void)window:(NSWindow *)window startCustomAnimationToEnterFullScreenWithDuration:(NSTimeInterval)duration
 {
     OEGameViewController *gameViewController = [[self OE_gameDocument] gameViewController];
-    OEGameView *gameView                     = [gameViewController gameView];
-    CALayer *layer                           = [[_screenshotWindow screenshotView] layer];
-    NSView *contentView                      = [(OEHUDWindow *)window mainContentView];
-    NSScreen *mainScreen                     = [[NSScreen screens] objectAtIndex:0];
+    NSScreen *mainScreen                     = window.screen;
     const NSRect screenFrame                 = [mainScreen frame];
     const NSTimeInterval hideBorderDuration  = duration / 4;
     const NSTimeInterval resizeDuration      = duration - hideBorderDuration;
-    const NSRect contentFrame                = [OEHUDWindow mainContentRectForFrameRect:[window frame]];
-    const NSRect screenshotWindowFrame       = [self OE_screenshotWindowFrameForOriginalFrame:contentFrame];
-    const NSRect fullScreenWindowFrame       = [self OE_screenshotWindowFrameForOriginalFrame:screenFrame];
+    const NSRect contentFrame                = [window contentRectForFrameRect:window.frame];
 
-
-    [_screenshotWindow setScreenshot:[gameView screenshot]];
-    [self OE_forceLayerReposition:layer toFrame:screenshotWindowFrame];
+    [_screenshotWindow setScreenshot:[gameViewController screenshot]];
+    [_screenshotWindow setFrame:contentFrame display:YES];
     [_screenshotWindow orderFront:self];
-
-    CABasicAnimation *moveToPosition = [CABasicAnimation animationWithKeyPath:@"position"];
-    moveToPosition.fromValue = [NSValue valueWithPoint:screenshotWindowFrame.origin];
-    moveToPosition.toValue = [NSValue valueWithPoint:fullScreenWindowFrame.origin];
-    moveToPosition.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
-    moveToPosition.duration = resizeDuration;
-    moveToPosition.fillMode = kCAFillModeForwards;
-    moveToPosition.removedOnCompletion = NO;
-
-    CABasicAnimation *scaleToSize = [CABasicAnimation animationWithKeyPath:@"bounds.size"];
-    scaleToSize.fromValue = [NSValue valueWithSize:screenshotWindowFrame.size];
-    scaleToSize.toValue = [NSValue valueWithSize:fullScreenWindowFrame.size];
-    scaleToSize.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
-    scaleToSize.duration = resizeDuration;
-    scaleToSize.fillMode = kCAFillModeForwards;
-    scaleToSize.removedOnCompletion = NO;
+    
+    NSRect screenshotFrame = screenFrame;
+    if (_integralScale != _OEFitToWindowScale)
+    {
+        NSPoint origin = NSMakePoint((screenFrame.size.width  - contentFrame.size.width)  / 2.0,
+                                     (screenFrame.size.height - contentFrame.size.height) / 2.0);
+        origin.x += screenFrame.origin.x;
+        origin.y += screenFrame.origin.y;
+        screenshotFrame = (NSRect){ .origin = origin, .size = contentFrame.size };
+        screenshotFrame = NSIntegralRect(screenshotFrame);
+    }
 
     // Fade the real window out
-    [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context) {
-        [context setDuration:hideBorderDuration];
-        [[window animator] setAlphaValue:0.0];
-        [[[(OEHUDWindow *)window borderWindow] animator] setAlphaValue:0.0];
-    } completionHandler:^{
-        [window setFrame:screenFrame display:YES];
-        [contentView setFrame:(NSRect){.size = screenFrame.size}]; // ignore title bar area
+    [CATransaction begin];
+    [CATransaction setAnimationDuration:hideBorderDuration];
+    [CATransaction setAnimationTimingFunction:[CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut]];
+    [CATransaction setCompletionBlock:^{
+        [window setFrame:screenFrame display:NO];
 
         // Resize the screenshot window to fullscreen
         [CATransaction begin];
+        [CATransaction setAnimationDuration:resizeDuration];
+        [CATransaction setAnimationTimingFunction:[CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut]];
         [CATransaction setCompletionBlock:^{
             [window setAlphaValue:1.0];
             [self OE_hideScreenshotWindow];
         }];
-
-        [layer addAnimation:moveToPosition forKey:@"position"];
-        [layer addAnimation:scaleToSize forKey:@"scale"];
         
+        [self->_screenshotWindow.animator setFrame:screenshotFrame display:YES];
         [CATransaction commit];
     }];
+    
+    [window.animator setAlphaValue:0.0];
+    [CATransaction commit];
 }
 
 - (void)windowDidEnterFullScreen:(NSNotification *)notification
@@ -516,9 +582,8 @@ typedef enum
     if(_resumePlayingAfterFullScreenTransition)
         [[self document] setEmulationPaused:NO];
 
-    [[gameViewController controlsWindow] hide];
+    [[gameViewController controlsWindow] hideAnimated:YES];
     [[gameViewController controlsWindow] setCanShow:YES];
-    [NSCursor unhide];
 }
 
 - (void)windowWillExitFullScreen:(NSNotification *)notification
@@ -530,9 +595,8 @@ typedef enum
     
     [[self document] setEmulationPaused:YES];
     
-    [NSCursor hide];
     [[gameViewController controlsWindow] setCanShow:NO];
-    [[gameViewController controlsWindow] hide];
+    [[gameViewController controlsWindow] hideAnimated:YES];
 }
 
 - (NSArray *)customWindowsToExitFullScreenForWindow:(NSWindow *)window
@@ -543,65 +607,62 @@ typedef enum
 - (void)window:(NSWindow *)window startCustomAnimationToExitFullScreenWithDuration:(NSTimeInterval)duration
 {
     OEGameViewController *gameViewController = [[self OE_gameDocument] gameViewController];
-    OEGameView *gameView                     = [gameViewController gameView];
-    CALayer *layer                           = [[_screenshotWindow screenshotView] layer];
-    NSView *contentView                      = [(OEHUDWindow *)window mainContentView];
-    NSScreen *mainScreen                     = [[NSScreen screens] objectAtIndex:0];
+    NSScreen *mainScreen                     = window.screen;
     const NSRect screenFrame                 = [mainScreen frame];
-    const NSRect fullScreenGameArea          = [self OE_screenshotWindowFrameForOriginalFrame:screenFrame];
     const NSTimeInterval showBorderDuration  = duration / 4;
     const NSTimeInterval resizeDuration      = duration - showBorderDuration;
+    
+    /* a window in full-screen mode does not have a title bar, thus we have
+     * to explicitly specify the style mask to compute the correct content
+     * frame */
+    const NSRect contentFrame = [NSWindow contentRectForFrameRect:_windowedFrame styleMask:window.styleMask & ~NSWindowStyleMaskFullScreen];
+    
+    NSSize fullScreenContentSize    = gameViewController.gameView.frame.size;
+    NSRect screenshotWindowedFrame  = contentFrame;
+    NSPoint targetWindowOrigin      = _windowedFrame.origin;
 
-    [_screenshotWindow setScreenshot:[gameView screenshot]];
-    [self OE_forceLayerReposition:layer toFrame:fullScreenGameArea];
-    [_screenshotWindow orderFront:self];
-
-    const NSRect contentFrame          = [OEHUDWindow mainContentRectForFrameRect:_frameForNonFullScreenMode];
-    const NSRect screenshotWindowFrame = [self OE_screenshotWindowFrameForOriginalFrame:contentFrame];
-
-    // Restore the window to its original frame
+    NSRect screenshotFrame = screenFrame;
+    if (_integralScale != _OEFitToWindowScale)
     {
-        [window setAlphaValue:0.0];
-        [window setFrame:_frameForNonFullScreenMode display:YES];
-
-        // Resize the content view so that it takes window decoration into account
-        NSRect contentRect = [window convertRectFromScreen:[OEHUDWindow mainContentRectForFrameRect:_frameForNonFullScreenMode]];
-        [contentView setFrame:contentRect];
+        NSPoint origin = NSMakePoint((screenFrame.size.width  - fullScreenContentSize.width)  / 2.0,
+                                     (screenFrame.size.height - fullScreenContentSize.height) / 2.0);
+        origin.x += screenFrame.origin.x;
+        origin.y += screenFrame.origin.y;
+        screenshotFrame = (NSRect){ .origin = origin, .size = fullScreenContentSize };
+        screenshotFrame = NSIntegralRect(screenshotFrame);
     }
 
-    CABasicAnimation *moveToPosition = [CABasicAnimation animationWithKeyPath:@"position"];
-    moveToPosition.fromValue = [NSValue valueWithPoint:fullScreenGameArea.origin];
-    moveToPosition.toValue = [NSValue valueWithPoint:screenshotWindowFrame.origin];
-    moveToPosition.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
-    moveToPosition.duration = resizeDuration;
-    moveToPosition.fillMode = kCAFillModeForwards;
-    moveToPosition.removedOnCompletion = NO;
-
-    CABasicAnimation *scaleToSize = [CABasicAnimation animationWithKeyPath:@"bounds.size"];
-    scaleToSize.fromValue = [NSValue valueWithSize:fullScreenGameArea.size];
-    scaleToSize.toValue = [NSValue valueWithSize:screenshotWindowFrame.size];
-    scaleToSize.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
-    scaleToSize.duration = resizeDuration;
-    scaleToSize.fillMode = kCAFillModeForwards;
-    scaleToSize.removedOnCompletion = NO;
+    [_screenshotWindow setScreenshot:[gameViewController screenshot]];
+    [_screenshotWindow setFrame:screenshotFrame display:YES];
+    [_screenshotWindow orderFront:self];
+    [window setAlphaValue:0.0];
 
     // Scale the screenshot window down
     [CATransaction begin];
+    [CATransaction setAnimationDuration:resizeDuration];
+    [CATransaction setAnimationTimingFunction:[CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut]];
     [CATransaction setCompletionBlock:^{
+        // Restore the window to its original frame.
+        //   We do it using -setContentSize: instead of -setFrame:display:
+        // because -setFrame:display: does not obey the new style mask correctly
+        // for some reason
+        window.styleMask = window.styleMask & ~NSWindowStyleMaskFullScreen;
+        [window setContentSize:contentFrame.size];
+        [window setFrameOrigin:targetWindowOrigin];
+        
         // Fade the real window back in after the scaling is done
-        [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context) {
-            [context setDuration:showBorderDuration];
-
-            [[window animator] setAlphaValue:1.0];
-            [[[(OEHUDWindow *)[self window] borderWindow] animator] setAlphaValue:1.0];
-        } completionHandler:^{
+        [CATransaction begin];
+        [CATransaction setAnimationDuration:showBorderDuration];
+        [CATransaction setAnimationTimingFunction:[CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut]];
+        [CATransaction setCompletionBlock:^{
             [self OE_hideScreenshotWindow];
         }];
+        
+        [window.animator setAlphaValue:1.0];
+        [CATransaction commit];
     }];
-
-    [_screenshotWindow.screenshotView.layer addAnimation:moveToPosition forKey:@"moveToPosition"];
-    [_screenshotWindow.screenshotView.layer addAnimation:scaleToSize forKey:@"scaleToSize"];
-
+    
+    [_screenshotWindow.animator setFrame:screenshotWindowedFrame display:YES];
     [CATransaction commit];
 }
 
@@ -610,16 +671,14 @@ typedef enum
     OEGameViewController *gameViewController = [[self OE_gameDocument] gameViewController];
 
     _fullScreenStatus = _OEPopoutGameWindowFullScreenStatusNonFullScreen;
-
-    [[self window] setAnimationBehavior:NSWindowAnimationBehaviorDocumentWindow];
-    [[self window] makeKeyAndOrderFront:self];
+    _integralScale    = _windowedIntegralScale;
 
     if(_resumePlayingAfterFullScreenTransition)
         [[self document] setEmulationPaused:NO];
 
-    [[gameViewController controlsWindow] hide];
+    [[gameViewController controlsWindow] hideAnimated:YES];
     [[gameViewController controlsWindow] setCanShow:YES];
-    [NSCursor unhide];
+    [gameViewController gameViewFillSuperView];
 }
 
 - (void)windowDidFailToEnterFullScreen:(NSWindow *)window
@@ -632,7 +691,6 @@ typedef enum
         [[self document] setEmulationPaused:NO];
 
     [[gameViewController controlsWindow] setCanShow:YES];
-    [NSCursor unhide];
 }
 
 - (void)windowDidFailToExitFullScreen:(NSWindow *)window
@@ -645,7 +703,6 @@ typedef enum
         [[self document] setEmulationPaused:NO];
 
     [[gameViewController controlsWindow] setCanShow:YES];
-    [NSCursor unhide];
 }
 
 @end
@@ -654,6 +711,21 @@ typedef enum
 
 - (void)setScreenshot:(NSImage *)screenshot
 {
+    /* The game view uses the kCGColorSpaceITUR_709 color space, while the
+     * screenshots we get use a sRGB color space for exactly the same pixel
+     * data. We must fix this mismatch to make the screenshot window look
+     * exactly the same as the game view. */
+    CGImageRef cgimg = [screenshot CGImageForProposedRect:NULL context:NULL hints:nil];
+    if (cgimg) {
+        NSBitmapImageRep *rep = [[NSBitmapImageRep alloc] initWithCGImage:cgimg];
+        CGColorSpaceRef cgcs = CGColorSpaceCreateWithName(kCGColorSpaceITUR_709);
+        NSColorSpace *cs = [[NSColorSpace alloc] initWithCGColorSpace:cgcs];
+        CGColorSpaceRelease(cgcs);
+        rep = [rep bitmapImageRepByRetaggingWithColorSpace:cs];
+        screenshot = [[NSImage alloc] init];
+        [screenshot addRepresentation:rep];
+    }
+    
     [[self screenshotView] setImage:screenshot];
 }
 

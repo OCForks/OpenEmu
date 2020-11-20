@@ -1,32 +1,9 @@
-/*
- Copyright (c) 2015, OpenEmu Team
-
- Redistribution and use in source and binary forms, with or without
- modification, are permitted provided that the following conditions are met:
-     * Redistributions of source code must retain the above copyright
-       notice, this list of conditions and the following disclaimer.
-     * Redistributions in binary form must reproduce the above copyright
-       notice, this list of conditions and the following disclaimer in the
-       documentation and/or other materials provided with the distribution.
-     * Neither the name of the OpenEmu Team nor the
-       names of its contributors may be used to endorse or promote products
-       derived from this software without specific prior written permission.
-
- THIS SOFTWARE IS PROVIDED BY OpenEmu Team ''AS IS'' AND ANY
- EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- DISCLAIMED. IN NO EVENT SHALL OpenEmu Team BE LIABLE FOR ANY
- DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
 
 "%@ copy" = "%@ copy";
 
 "%@ could not be enabled because its plugin was not found." = "%@ could not be enabled because its plugin was not found.";
+
+"%@ games will appear here. Check out %@ on how to add disc-based games." = "%@ games will appear here. Check out %@ on how to add disc-based games.";
 
 "%@ games you add to OpenEmu will appear in this Console Library" = "%@ games you add to OpenEmu will appear in this Console Library";
 
@@ -34,31 +11,35 @@
 
 "A version of this plugin is already loaded" = "A version of this plugin is already loaded";
 
-"Add a Wiimote…" = "Add a Wiimote…";
+"Add" = "Add";
 
-"Add Cheat" = "Add Cheat";
+"Add a Wiimote…" = "Add a Wiimote…";
 
 "Add Cheat…" = "Add Cheat…";
 
-"Add Cover Art From File…" = "Add Cover Art From File…";
+"Add Cheat" = "Add Cheat";
 
-"Add To Collection" = "Add To Collection";
+"Add Cover Art from File…" = "Add Cover Art from File…";
 
-"Add untracked save states" = "Add untracked save states";
+"Add to Collection" = "Add to Collection";
+
+"Add to Library…" = "Add to Library…";
 
 "All Games" = "All Games";
 
 "All Homebrew" = "All Homebrew";
 
-"Always show BIOS preferences" = "Always show BIOS preferences";
+"Already in library:" = "Already in library:";
+
+"Already in library, but manually deleted or unreachable:" = "Already in library, but manually deleted or unreachable:";
 
 "Are you sure you want to delete %ld save games from your OpenEmu library?" = "Are you sure you want to delete %ld save games from your OpenEmu library?";
 
 "Are you sure you want to delete %ld screenshots from your OpenEmu library?" = "Are you sure you want to delete %ld screenshots from your OpenEmu library?";
 
-"Are you sure you want to delete the save game called '%@' from your OpenEmu library?" = "Are you sure you want to delete the save game called '%@' from your OpenEmu library?";
+"Are you sure you want to delete the save game called '%@' from your OpenEmu library?" = "Are you sure you want to delete the save game called “%@” from your OpenEmu library?";
 
-"Are you sure you want to delete the screenshot called '%@' from your OpenEmu library?" = "Are you sure you want to delete the screenshot called '%@' from your OpenEmu library?";
+"Are you sure you want to delete the screenshot called '%@' from your OpenEmu library?" = "Are you sure you want to delete the screenshot called “%@” from your OpenEmu library?";
 
 "Are you sure you want to delete the selected game from your OpenEmu library?" = "Are you sure you want to delete the selected game from your OpenEmu library?";
 
@@ -66,13 +47,15 @@
 
 "Are you sure you want to quit the application?" = "Are you sure you want to quit the application?";
 
+"Are you sure you want to remove the selected game from the collection?" = "Are you sure you want to remove the selected game from the collection?";
+
 "Are you sure you want to remove the selected games from the collection?" = "Are you sure you want to remove the selected games from the collection?";
 
-"Are you sure you want to remove this collection?" = "Are you sure you want to remove this collection?";
+"Are you sure you want to remove the collection '%@'?" = "Are you sure you want to remove the collection “%@”?";
 
-"Are you sure you want to reset the console?" = "Are you sure you want to reset the console?";
+"Are you sure you want to restart the game?" = "Are you sure you want to restart the game?";
 
-"Are you sure you want to stop emulation?" = "Are you sure you want to stop emulation?";
+"Are you sure you want to quit the game?" = "Are you sure you want to quit the game?";
 
 "At least one System must be enabled" = "At least one System must be enabled";
 
@@ -84,13 +67,7 @@
 
 "Bluetooth Not Enabled" = "Bluetooth Not Enabled";
 
-"Can delete save states" = "Can delete save states";
-
 "Cancel Cover Art Download" = "Cancel Cover Art Download";
-
-"Cancel OpenVGDB Update" = "Cancel OpenVGDB Update";
-
-"Cancel Operation" = "Cancel Operation";
 
 "Cancel" = "Cancel";
 
@@ -108,37 +85,29 @@
 
 "Choose OpenEmu Library" = "Choose OpenEmu Library";
 
-"Choose save states directory" = "Choose save states directory";
-
-"Choose Yes to remove all items from the queue. Items that finished importing will be preserved in your library." = "Choose Yes to remove all items from the queue. Items that finished importing will be preserved in your library.";
-
-"Cleanup autosave state" = "Cleanup autosave state";
-
-"Cleanup rom hashes" = "Cleanup rom hashes";
-
-"Cleanup Save States" = "Cleanup Save States";
-
-"Clicking on image selects button" = "Clicking on image selects button";
-
-"Clicking outside image deselects button" = "Clicking outside image deselects button";
+"This will remove all items from the queue. Items that finished importing will be preserved in your library." = "This will remove all items from the queue. Items that finished importing will be preserved in your library.";
 
 "Code:" = "Code:";
 
-"Collapse" = "Collapse";
-
-"COLLECTIONS" = "COLLECTIONS";
-
 "Collections" = "Collections";
 
-"CONSOLES" = "CONSOLES";
+"Configure Shader…" = "Configure Shader…";
+
+"Console" = "Console";
+
+"Consoles" = "Consoles";
 
 "Consolidate Files…" = "Consolidate Files…";
 
 "Consolidate" = "Consolidate";
 
-"Consolidating will copy all of the selected games into the OpenEmu Library folder.\n\nThis cannot be undone." = "Consolidating will copy all of the selected games into the OpenEmu Library folder.\n\nThis cannot be undone.";
+"Consolidating files failed." = "Consolidating files failed.";
 
-"Controls Setup" = "Controls Setup";
+"Consolidating will copy all of the selected games into the OpenEmu Library folder." = "Consolidating will copy all of the selected games into the OpenEmu Library folder.";
+
+"This cannot be undone." = "This cannot be undone.";
+
+"Contains no data:" = "Contains no data:";
 
 "Controls" = "Controls";
 
@@ -150,33 +119,27 @@
 
 "Copying ROM Files…" = "Copying ROM Files…";
 
+"Copying ROM files failed!" = "Copying ROM files failed!";
+
 "Core Provided By…" = "Core Provided By…";
+
+"Core" = "Core";
 
 "Cores" = "Cores";
 
-"Could not move complete library! %ld roms were moved" = "Could not move complete library! %ld roms were moved";
-
 "Could not move library data!" = "Could not move library data!";
 
-"Couldn't connect to the background process." = "Couldn't connect to the background process.";
+"Couldn't load %@ plugin" = "Couldn’t load %@ plugin";
 
-"Couldn't load %@ plugin" = "Couldn't load %@ plugin";
-
-"Create a personal game selection. To add to a collection, select a game from your console library and drag it to ’%@’ on the left." = "Create a personal game selection. To add to a collection, select a game from your console library and drag it to ’%@’ on the left.";
+"Create a personal game selection. To add to a collection, select a game from your console library and drag it to ’%@’ in the sidebar." = "Create a personal game selection. To add to a collection, select a game from your console library and drag it to “%@” in the sidebar.";
 
 "Create Library…" = "Create Library…";
 
 "Create or Load Save State" = "Create or Load Save State";
 
-"Dark GridView context menu" = "Dark GridView context menu";
-
-"Database Actions" = "Database Actions";
-
-"Debug Mode" = "Debug Mode";
+"Create your personal collection of screenshots. To take a screenshot, you can use the keyboard shortcut ⌘ + T while playing a game." = "Create your personal collection of screenshots. To take a screenshot, you can use the keyboard shortcut ⌘ + T while playing a game.";
 
 "Default Core" = "Default Core";
-
-"Delete Artwork that can be downloaded" = "Delete Artwork that can be downloaded";
 
 "Delete Collection" = "Delete Collection";
 
@@ -196,39 +159,35 @@
 
 "Delete Screenshots" = "Delete Screenshots";
 
+"Delete" = "Delete";
+
+"Description" = "Description"; // Search field menu, only search description
+
 "Deselect All" = "Deselect All";
 
 "Device Disconnected" = "Device Disconnected";
 
 "Device number %lu, %@, has disconnected." = "Device number %1$lu, %2$@, has disconnected.";
 
-"DEVICES" = "DEVICES";
+"Disc %u" = "Disc %u";
 
-"Disable aspect ratio correction" = "Disable aspect ratio correction";
+"Disc-based games have special requirements. Please read the disc importing guide." = "Disc-based games have special requirements. Please read the disc importing guide.";
 
-"Disable grid view gloss overlay" = "Disable grid view gloss overlay";
-
-"Do it!" = "Do it!";
+"Dismiss" = "Dismiss";
 
 "Do not ask me again" = "Do not ask me again";
 
-"Do Not Save" = "Do Not Save";
-
 "Do not show me again" = "Do not show me again";
 
-"Do you really want to cancel the import process?" = "Do you really want to cancel the import process?";
+"Do you really want to cancel importation?" = "Do you really want to cancel importation?";
 
 "Do you want to continue playing where you left off?" = "Do you want to continue playing where you left off?";
 
-"Don't Import Selected" = "Don't Import Selected";
+"Don't Import Selected" = "Don’t Import Selected";
 
 "Done" = "Done";
 
 "Download Cover Art" = "Download Cover Art";
-
-"Download missing artwork on the fly" = "Download missing artwork on the fly";
-
-"Download missing artwork" = "Download missing artwork";
 
 "Download" = "Download";
 
@@ -240,37 +199,39 @@
 
 "Drag & Drop Games Here" = "Drag & Drop Games Here";
 
-"Draw button mask above image" = "Draw button mask above image";
+"Drag & Drop Save States Here" = "Drag & Drop Save States Here";
 
 "Duplicate Collection" = "Duplicate Collection";
 
-"Edit Game Controls" = "Edit Game Controls";
+"Edit Game Controls…" = "Edit Game Controls…";
 
 "Enable now" = "Enable now";
 
-"Enable Retrode support" = "Enable Retrode support";
-
 "Error!" = "Error!";
+
+"Everything" = "Everything"; // Search field menu, search everything item title
 
 "Featured Games" = "Featured Games";
 
 "Fetching Games…" = "Fetching Games…";
 
+"Filter by:" = "Filter by:"; // Search field menu, first item, instructional
+
 "Game %ld of %ld" = "Game %1$ld of %2$ld";
+
+"Game Name" = "Game Name"; // Search field menu, only search game name
 
 "Game requires download" = "Game requires download";
 
 "Game Scanner" = "Game Scanner";
 
-"Game View Background color" = "Game View Background color";
-
 "Gameplay" = "Gameplay";
 
-"General" = "General";
+"Have you read the guide?" = "Have you read the guide?";
 
-"Hide \"%@\"" = "Hide \"%@\"";
+"Hide \"%@\"" = "Hide “%@”";
 
-"HUD Bar / Gameplay" = "HUD Bar / Gameplay";
+"Homebrew Games" = "Homebrew Games";
 
 "If there is a red button on the back battery cover, press it.\nIf not, hold down buttons ①+②." = "If there is a red button on the back battery cover, press it.\nIf not, hold down buttons ①+②.";
 
@@ -280,29 +241,31 @@
 
 "In order to play the game it must be downloaded." = "In order to play the game it must be downloaded.";
 
+"Insert Cart/Disk/Tape…" = "Insert Cart/Disk/Tape…";
+
 "Install" = "Install";
 
 "Installing Core" = "Installing Core";
 
-"Join multi-line cheats with '+' e.g. 000-000+111-111" = "Join multi-line cheats with '+' e.g. 000-000+111-111";
+"Invalid cue sheet format:" = "Invalid cue sheet format:";
+
+"Invalid gdi format:" = "Invalid gdi format:";
+
+"Join multi-line cheats with '+' e.g. 000-000+111-111" = "Join multi-line cheats with ‘+’ e.g. 000-000+111-111";
 
 "Keep Files" = "Keep Files";
 
 "Keyboard" = "Keyboard";
 
-"Library Window" = "Library Window";
+"Learn More" = "Learn More";
 
 "Library" = "Library";
 
 "Load" = "Load";
 
-"Locate '%@'" = "Locate '%@'";
+"Locate '%@'" = "Locate “%@”";
 
-"Locate" = "Locate";
-
-"Log HID Events" = "Log HID Events";
-
-"Log Keyboard Events" = "Log Keyboard Events";
+"Locate…" = "Locate…";
 
 "Low Controller Battery" = "Low Controller Battery";
 
@@ -310,11 +273,9 @@
 
 "Make your Wiimote discoverable" = "Make your Wiimote discoverable";
 
-"Manually choose system on import" = "Manually choose system on import";
-
-"MEDIA" = "MEDIA";
-
 "Missing Core" = "Missing Core";
+
+"Missing referenced file:" = "Missing referenced file:";
 
 "Move selected game to Trash, or keep it in the Library folder?" = "Move selected game to Trash, or keep it in the Library folder?";
 
@@ -322,7 +283,13 @@
 
 "Move to Trash" = "Move to Trash";
 
+"Moving Library…" = "Moving Library…";
+
+"Must not be compressed:" = "Must not be compressed:";
+
 "Mute Audio" = "Mute Audio";
+
+"Name" = "Name"; // Search field menu, only search names
 
 "New Collection from Selection" = "New Collection from Selection";
 
@@ -336,13 +303,21 @@
 
 "No game played yet!" = "No game played yet!";
 
+"No Internet Connection" = "No Internet Connection";
+
+"No permission to open:" = "No permission to open:";
+
 "No Save States available" = "No Save States available";
+
+"No Screenshots Found" = "No Screenshots Found";
+
+"No valid system detected:" = "No valid system detected:";
 
 "No" = "No";
 
 "None" = "None";
 
-"Not implemented right now" = "Not implemented right now";
+"Not plain text:" = "Not plain text:";
 
 "OK" = "OK";
 
@@ -358,19 +333,17 @@
 
 "OpenEmu needs a library to continue. You may choose an existing OpenEmu library or create a new one" = "OpenEmu needs a library to continue. You may choose an existing OpenEmu library or create a new one";
 
-"OpenEmu uses 'Cores' to emulate games. You need the %@ Core to play %@" = "OpenEmu uses 'Cores' to emulate games. You need the %1$@ Core to play %2$@";
+"OpenEmu uses 'Cores' to emulate games. You need the %@ Core to play %@" = "OpenEmu uses ‘Cores’ to emulate games. You need the %1$@ Core to play %2$@";
 
 "OpenEmu will save and quit all games that are currently running." = "OpenEmu will save and quit all games that are currently running.";
 
-"OpenVGDB" = "OpenVGDB";
-
 "Options" = "Options";
 
-"Pause Emulation" = "Pause Emulation";
+"Pause/Restart" = "Pause/Restart";
 
-"Pause Gameplay" = "Pause Gameplay";
+"Pause Game" = "Pause Game";
 
-"Perform Sanity Check on Database" = "Perform Sanity Check on Database";
+"Play" = "Play";
 
 "Play Game" = "Play Game";
 
@@ -388,9 +361,9 @@
 
 "Quick Save State" = "Quick Save State";
 
-"Quick Save" = "Quick Save";
-
 "Quick Save, Slot %@" = "Quick Save, Slot %@";
+
+"Quick Save" = "Quick Save";
 
 "Quit" = "Quit";
 
@@ -400,21 +373,13 @@
 
 "Recovered Auto Save" = "Recovered Auto Save";
 
-"Region" = "Region";
+"Remove Collection" = "Remove Collection";
 
-"Relaunch" = "Relaunch";
+"Remove Game" = "Remove Game";
 
-"Remove duplicate states" = "Remove duplicate states";
+"Remove Games" = "Remove Games";
 
-"Remove duplicated roms" = "Remove duplicated roms";
-
-"Remove missing states" = "Remove missing states";
-
-"Remove untracked artwork files" = "Remove untracked artwork files";
-
-"Remove" = "Remove";
-
-"Rename \"%@\"" = "Rename \"%@\"";
+"Rename \"%@\"" = "Rename “%@”";
 
 "Rename Game" = "Rename Game";
 
@@ -424,33 +389,25 @@
 
 "Required files are missing." = "Required files are missing.";
 
-"Reset main window size" = "Reset main window size";
+"Resolve %ld Issue" = "Resolve %ld Issue";
 
 "Resolve %ld Issues" = "Resolve %ld Issues";
 
-"Resolve Issues" = "Resolve Issues";
-
-"Restart now" = "Restart now";
-
-"Restart System" = "Restart System";
+"Restart Game" = "Restart Game";
 
 "Restart" = "Restart";
 
-"Resume Emulation" = "Resume Emulation";
+"Resume Game" = "Resume Game";
 
 "Resume" = "Resume";
 
-"Run games using" = "Run games using";
-
 "Save As:" = "Save As:";
 
-"Save Current Game" = "Save Current Game";
+"Save Current Game…" = "Save Current Game…";
 
 "Save Game" = "Save Game";
 
 "Save States" = "Save States";
-
-"Save to Slot %d" = "Save to Slot %d";
 
 "Save-Game-%ld %@" = "Save-Game-%ld %@";
 
@@ -468,89 +425,67 @@
 
 "Select All" = "Select All";
 
-"Select Audio Output Device" = "Select Audio Output Device";
+"Select Audio Output Device" = "Audio Output Device";
 
-"Select Cheat" = "Select Cheat";
+"Select Cheat" = "Cheats";
 
-"Select Core" = "Select Core";
+"Select Core" = "Cores";
 
-"Select Filter" = "Select Filter";
+"Select Disc" = "Discs";
 
-"Select first field after setting the last" = "Select first field after setting the last";
+"Select Display Mode" = "Display Modes";
 
-"Select Scale" = "Select Scale";
+"Select Shader" = "Shaders";
 
-"Set default save states directory" = "Set default save states directory";
+"Select Scale" = "Scale";
 
-"Setup Assistant has finished" = "Setup Assistant has finished";
+"Shader Parameters" = "Shader Parameters";
 
-"Show all global keys" = "Show all global keys";
-
-"Show audio output device in menu" = "Show audio output device in menu";
-
-"Show autosave in menu" = "Show autosave in menu";
-
-"Show collection view debug controller" = "Show collection view debug controller";
-
-"Show game titles instead of rom names" = "Show game titles instead of rom names";
+"Share" = "Share";
 
 "Show in Finder" = "Show in Finder";
 
-"Show options button" = "Show options button";
-
-"Show quicksave in menu" = "Show quicksave in menu";
-
-"Show quicksave notification during gameplay" = "Show quicksave notification during gameplay";
-
-"Slot %d" = "Slot %d";
-
 "Slot %ld" = "Slot %ld";
-
-"Slot 1" = "Slot 1";
 
 "Some migrations failed to complete properly" = "Some migrations failed to complete properly";
 
+"Special thanks to everyone that made\nOpenEmu possible. To find out more\nabout our contributors, emulator cores,\ndocumentation, licenses and to issue\nbugs please visit us on our GitHub." = "Special thanks to everyone that made\nOpenEmu possible. To find out more\nabout our contributors, emulator cores,\ndocumentation, licenses and to issue\nbugs please visit us on our GitHub.";
+
 "Start Scanning" = "Start Scanning";
 
-"Stop Emulation" = "Stop Emulation";
+"Quit Game" = "Quit Game";
 
 "Stop" = "Stop";
 
-"Switch To Flow View" = "Switch To Flow View";
+"Switch To Grid View" = "Switch to Grid View";
 
-"Switch To Grid View" = "Switch To Grid View";
+"Switch To List View" = "Switch to List View";
 
-"Switch To List View" = "Switch To List View";
+"System Default" = "System Default"; // Default audio device setting
 
 "System Files" = "System Files";
 
 "System" = "System";
 
-"Take screenshots in native size" = "Take screenshots in native size";
-
 "Takes you to the %@ project website" = "Takes you to the %@ project website";
 
 "The %@ core has compatibility issues and some games may contain glitches or not play at all.\n\nPlease do not report problems as we are not responsible for the development of %@." = "The %1$@ core has compatibility issues and some games may contain glitches or not play at all.\n\nPlease do not report problems as we are not responsible for the development of %2$@.";
-
-"The background process connection couldn't be established" = "The background process connection couldn't be established";
-
-"The background process couldn't be launched" = "The background process couldn't be launched";
 
 "The battery in device number %lu, %@, is low. Please charge or replace the battery." = "The battery in device number %1$lu, %2$@, is low. Please charge or replace the battery.";
 
 "The core could not be downloaded. Try installing it from the Cores preferences." = "The core could not be downloaded. Try installing it from the Cores preferences.";
 
-"The file you selected doesn't exist" = "The file you selected doesn't exist";
+"The file you selected doesn't exist" = "The file you selected doesn’t exist";
 
-"The game '%@' could not be started because a rom file could not be found. Do you want to locate it?" = "The game '%@' could not be started because a rom file could not be found. Do you want to locate it?";
+"The game '%@' could not be started because a rom file could not be found. Do you want to locate it?" = "The game “%@” could not be started because a rom file could not be found. Do you want to locate it?";
 
-"The game '%@' was imported." = "The game '%@' was imported.";
+"The game '%@' was imported." = "The game “%@” was imported.";
 
 "The OpenEmu Library could not be found." = "The OpenEmu Library could not be found.";
 
-"The root proxy object is nil." = "The root proxy object is nil.";
-
 "The System plugin could not be found!" = "The System plugin could not be found!";
+
+"this guide" = "this guide";
 
 "This save state was created with a different core. Do you want to switch to that core now?" = "This save state was created with a different core. Do you want to switch to that core now?";
 
@@ -558,37 +493,35 @@
 
 "Title:" = "Title:";
 
-"To launch the save state %@ you will need to install the '%@' Core" = "To launch the save state %1$@ you will need to install the '%2$@' Core";
+"To launch the save state %@ you will need to install the '%@' Core" = "To launch the save state %1$@ you will need to install the “%2$@” Core";
 
 "To run this core you need the following:\n\n%@Drag and drop the required file(s) onto the game library window and try again." = "To run this core you need the following:\n\n%@Drag and drop the required file(s) onto the game library window and try again.";
 
 "Toggle Fullscreen" = "Toggle Fullscreen";
 
-"Toggle Sidebar" = "Toggle Sidebar";
-
 "Trash downloaded Files" = "Trash downloaded Files";
+
+"Unexpected error:" = "Unexpected error:";
 
 "Unmute Audio" = "Unmute Audio";
 
-"Update OpenVGDB" = "Update OpenVGDB";
-
 "Update" = "Update";
 
-"Use game name as window title" = "Use game name as window title";
-
-"Use gamecore picker" = "Use gamecore picker";
-
-"Use quicksave slots" = "Use quicksave slots";
+"Updating Library" = "Updating Library";
 
 "User guide on BIOS files" = "User guide on BIOS files";
 
+"Version" = "Version";
+
+"View Guide in Browser" = "View Guide in Browser";
+
+"Volume" = "Volume";
+
 "Warning" = "Warning";
 
-"While performing this operation OpenEmu will be unresponsive." = "While performing this operation OpenEmu will be unresponsive.";
+"With OpenEmu you can save your progress at any time using save states. We will even make auto saves for you, when you leave a game. Come back here to get an overview of all your saves." = "With OpenEmu you can save your progress at any time using save states. We will even make auto saves for you, when you leave a game. Come back here to get an overview of all your saves.";
 
-"WiiRemote support (requires relaunch)" = "WiiRemote support (requires relaunch)";
-
-"Won't be able to recognize it as special save state…" = "Won't be able to recognize it as special save state…";
+"Won't be able to recognize it as special save state…" = "Won’t be able to recognize it as special save state…";
 
 "Would you like to continue your last game?" = "Would you like to continue your last game?";
 
@@ -596,7 +529,7 @@
 
 "Yes" = "Yes";
 
-"You can't move your library here!" = "You can't move your library here!";
+"You can't move your library into one of its subfolders." = "You can’t move your library into one of its subfolders.";
 
 "You need to restart the application to commit the change" = "You need to restart the application to commit the change";
 
@@ -604,4 +537,106 @@
 
 "Your library was moved sucessfully." = "Your library was moved sucessfully.";
 
-"Cancel cover sync for all games" = "Cancel cover sync for all games";
+"Toolbar: Library" = "Library";
+
+"Toolbar: Save States" = "Save States";
+
+"Toolbar: Screenshots" = "Screenshots";
+
+"Toolbar: Homebrew" = "Homebrew";
+
+"Grid Size" = "Grid Size";   // shown when the corresponding item does not fit in the main window's toolbar
+
+"View Mode" = "View Mode";   // shown when the corresponding item does not fit in the main window's toolbar
+
+"Category" = "Category";   // shown when the corresponding item does not fit in the main window's toolbar
+
+"An issue was detected with one of your controllers." = "An issue was detected with one of your controllers.";  // Headline for bindings repaired alert
+
+"The button profile for one of your controllers does not match the profile detected the last time it was connected to OpenEmu. Some of the controls associated to the affected controller were reset.\n\nYou can go to the Controls preferences to check which associations were affected." = "The button profile for one of your controllers does not match the profile detected the last time it was connected to OpenEmu. Some of the controls associated to the affected controller were reset.\n\nYou can go to the Controls preferences to check which associations were affected.";  // Message for bindings repaired alert
+
+"Keycode 0x%lX" = "Keycode 0x%lX";  // Fallback for unknown keys
+
+"Your Mac is too old for this version of OpenEmu" = "Your Mac is too old for this version of OpenEmu";  // Message for the alert which appears when no Metal-enabled GPUs are detected
+
+"Since version 2.1, OpenEmu requires a GPU which supports Metal. Metal is available on all Macs that support macOS 10.14 or later.\n\nAs OpenEmu does not work with your current hardware/software configuration, it will now close." = "Since version 2.1, OpenEmu requires a GPU which supports Metal. Metal is available on all Macs that support macOS 10.14 or later.\n\nAs OpenEmu does not work with your current hardware/software configuration, it will now close.";  // Informative text for the alert which appears when no Metal-enabled GPUs are detected
+
+"Quit OpenEmu" = "Quit OpenEmu";  // Button title for the alert which appears when no Metal-enabled GPUs are detected
+
+"The %@ core plugin is deprecated" = "The %@ core plugin is deprecated";  // Message title (removal far away)
+
+"The %@ core plugin is deprecated, and will be removed soon" = "The %@ core plugin is deprecated, and will be removed soon";  // Message title (removal happening soon)
+
+"This core plugin will not be available in the future. Once it is removed, any save states created with it will stop working." = "This core plugin will not be available in the future. Once it is removed, any save states created with it will stop working.";  // Message info, part 1 (removal far away)
+
+"In a few days, this core plugin is going to be automatically removed. Once it is removed, any save states created with it will stop working." = "In a few days, this core plugin is going to be automatically removed. Once it is removed, any save states created with it will stop working.";  // Message info, part 1 (removal happening soon)
+
+"We suggest you switch to the %@ core plugin as soon as possible." = "We suggest you switch to the %@ core plugin as soon as possible.";  // Message info, part 2 (shown only if the replacement plugin is available)
+
+"This plugin is currently unsupported" = "This plugin is currently unsupported";
+
+"Install %@" = "Install %@";
+
+"Install %@ and Set as Default" = "Install %@ and Set as Default";
+
+"Ignore" = "Ignore";
+
+"OpenEmu requires additional permissions" = "OpenEmu requires additional permissions";  // Headline for Input Monitoring permissions
+
+"OpenEmu must be granted the Input Monitoring permission in order to use the keyboard as an input device.\n\nToggling the permission may also resolve keyboard input issues." = "OpenEmu must be granted the Input Monitoring permission in order to use the keyboard as an input device.\n\nToggling the permission may also resolve keyboard input issues.";  // "Message for Input Monitoring permissions"
+
+"Open System Preferences" = "Open System Preferences";
+
+"Moving the Game Library is not recommended" = "Moving the Game Library is not recommended";  //Message headline (attempted to change location of library)
+
+"The OpenEmu Game Library contains a database file which could get corrupted if the library is moved to the following locations:<br><br><ul><li>Folders managed by cloud synchronization software (like <b>iCloud Drive</b>)</li><li>Network drives</li></ul><br>Additionally, <b>sharing the same library between multiple computers or users</b> may also corrupt it. This also applies to moving the library to external USB drives." = "The OpenEmu Game Library contains a database file which could get corrupted if the library is moved to the following locations:<br><br><ul><li>Folders managed by cloud synchronization software (like <b>iCloud Drive</b>)</li><li>Network drives</li></ul><br>Additionally, <b>sharing the same library between multiple computers or users</b> may also corrupt it. This also applies to moving the library to external USB drives.";  // Message text (attempted to change location of library, HTML
+
+"I understand the risks" = "I understand the risks";  // OK button (attempted to change location of library)
+
+"Continue" = "Continue";
+
+"Last Played" = "Last Played";
+
+"Save Games" = "Save Games";
+
+"Play Count" = "Play Count";
+
+"Play Time" = "Play Time";
+
+"Fill Screen" = "Fill Screen";  // Integral scale menu item title
+
+"ECM compressed binary detected." = "ECM compressed binary detected.";
+
+"ECM compressed binaries cannot be imported. Please read the disc importing guide." = "ECM compressed binaries cannot be imported. Please read the disc importing guide.";
+
+"Files failed to import." = "Files failed to import.";
+
+"\"%@\" in %@" = "\"%1$@\" in %2$@";  // Import error description: file already imported (first item: filename, second item: system library name)
+
+"NOT FOUND: \"%@\"" = "NOT FOUND: \"%@\"";  // Import error description: referenced file not found
+
+"Choose Apple menu  > System Preferences, click Security & Privacy then select the Privacy tab. Remove the existing Files and Folders permission for OpenEmu, if exists, and instead grant Full Disk Access." = "Choose Apple menu  > System Preferences, click Security & Privacy then select the Privacy tab. Remove the existing Files and Folders permission for OpenEmu, if exists, and instead grant Full Disk Access.";
+
+"Decrease Grid Size" = "Decrease Grid Size";
+
+"Increase Grid Size" = "Increase Grid Size";
+
+"The emulator could not load ROM." = "The emulator could not load the ROM.";
+
+"To assign a new key or button to %@, press this button, then press the desired key or button on your keyboard or gamepad." = "To assign a new key or button to %@, press this button, then press the desired key or button on your keyboard or gamepad."; // Controls preferences, accessibility help
+
+"Changed button for %1$@ to %2$@." = "Changed button for %1$@ to %2$@."; // Controls preferences, accessibility notification (“Changed button for Up to W.”)
+
+"Not assigned" = "Not assigned"; // Controls preferences, accessibility title (key is not mapped, “empty”)
+
+"OpenEmu could not download required data from the internet" = "OpenEmu could not download required data from the internet";  // Setup Assistant
+
+"An error occurred while preparing the setup assistant. (%@) Make sure you are connected to the internet and try again." = "An error occurred while preparing the setup assistant. (%@) Make sure you are connected to the internet and try again.";  // Setup Assistant
+
+"Retry" = "Retry";
+
+"Downloading core list..." = "Downloading core list…";
+
+"The %@ core has quit unexpectedly" = "The %@ core has quit unexpectedly";
+
+"<b>If and only if this issue persists</b>, please submit feedback including:<br><br><ul><li>The model of Mac you are using <b>and</b> the version of macOS you have installed<ul><li>This information is found in  > About this Mac</li></ul></li><li>The <b>exact name</b> of the game you were playing</li><li>The crash report of OpenEmuHelperApp<ul><li>Open Console.app, click on \"Crash Reports\" or \"User Reports\" in the sidebar, then look for the latest document with OpenEmuHelperApp in the name</ul></li></li></ul><br><b>Always search for similar feedback previously reported by other users!</b><br>If any of this information is omitted, or if similar feedback has already been issued, your issue report may be closed." = "<b>If and only if this issue persists</b>, please submit feedback including:<br><br><ul><li>The model of Mac you are using <b>and</b> the version of macOS you have installed<ul><li>This information is found in  > About this Mac</li></ul></li><li>The <b>exact name</b> of the game you were playing</li><li>The crash report of OpenEmuHelperApp<ul><li>Open Console.app, click on “Crash Reports” or “User Reports” in the sidebar, then look for the latest document with OpenEmuHelperApp in the name</ul></li></li></ul><br><b>Always search for similar feedback previously reported by other users!</b><br>If any of this information is omitted, or if similar feedback has already been issued, your issue report may be closed.";  // Suggestion for crashed cores (HTML). Localizers: specify the report must be written in English

@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2011, OpenEmu Team
+ Copyright (c) 2015, OpenEmu Team
  
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -25,7 +25,8 @@
  */
 
 #import "OEDBSmartCollection.h"
-#import "OETheme.h"
+
+NS_ASSUME_NONNULL_BEGIN
 
 @implementation OEDBSmartCollection
 
@@ -35,9 +36,10 @@
 }
 
 #pragma mark - Sidebar Item Protocol
-- (NSImage *)sidebarIcon
+
+- (nullable NSImage *)sidebarIcon
 {
-    return [[OETheme sharedTheme] imageForKey:@"collections_smart" forState:OEThemeStateDefault];
+    return [NSImage imageNamed:@"collection_smart"];
 }
 
 - (BOOL)isEditableInSidebar
@@ -47,7 +49,7 @@
 
 - (NSString *)sidebarName
 {
-    if([self OE_isRecentlyAddedCollection])
+    if(self.OE_isRecentlyAddedCollection)
     {
         return NSLocalizedString(@"Recently Added", @"Recently Added Smart Collection Name");
     }
@@ -58,7 +60,8 @@
 {}
 
 #pragma mark - Game Collection View Item
-- (NSString *)collectionViewName
+
+- (nullable NSString *)collectionViewName
 {
     if([self OE_isRecentlyAddedCollection])
     {
@@ -91,7 +94,7 @@
     return 30;
 }
 
-- (NSArray*)fetchSortDescriptors
+- (NSArray <NSSortDescriptor *> *)fetchSortDescriptors
 {
     if([self OE_isRecentlyAddedCollection])
         return @[[NSSortDescriptor sortDescriptorWithKey:@"importDate" ascending:NO]];
@@ -99,8 +102,12 @@
 }
 
 #pragma mark - Private Methods
+
 - (BOOL)OE_isRecentlyAddedCollection
 {
     return [[self valueForKey:@"name"] isEqualToString:@"Recently Added"];
 }
+
 @end
+
+NS_ASSUME_NONNULL_END

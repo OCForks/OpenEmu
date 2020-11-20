@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "0610"
+   LastUpgradeVersion = "1200"
    version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -24,6 +24,62 @@
          </ExecutionAction>
       </PostActions>
       <BuildActionEntries>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "C6772A251710A4BA00ED580A"
+               BuildableName = "OpenEmuBase.framework"
+               BlueprintName = "OpenEmuBase"
+               ReferencedContainer = "container:OpenEmu-SDK/OpenEmu-SDK.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "C6772A8B1710CD7E00ED580A"
+               BuildableName = "OpenEmuSystem.framework"
+               BlueprintName = "OpenEmuSystem"
+               ReferencedContainer = "container:OpenEmu-SDK/OpenEmu-SDK.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "8D15AC270486D014006FF6A4"
+               BuildableName = "OpenEmu.app"
+               BlueprintName = "OpenEmu"
+               ReferencedContainer = "container:OpenEmu/OpenEmu.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "94EBBCD7183F422500743756"
+               BuildableName = "Build &amp; Copy Experimental &amp; Alpha SystemPlugins"
+               BlueprintName = "Build &amp; Copy Experimental &amp; Alpha SystemPlugins"
+               ReferencedContainer = "container:OpenEmu/OpenEmu.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
          <BuildActionEntry
             buildForTesting = "YES"
             buildForRunning = "YES"
@@ -102,52 +158,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "B56F6FC20F38FC1600DCE88B"
-               BuildableName = "Build &amp; Install NeoPop"
-               BlueprintName = "Build &amp; Install NeoPop"
-               ReferencedContainer = "container:NeoPop/NeoPop.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "82D815AB0F1D882B00EF8CF5"
-               BuildableName = "Build &amp; Install VisualBoyAdvance"
-               BlueprintName = "Build &amp; Install VisualBoyAdvance"
-               ReferencedContainer = "container:VisualBoyAdvance/VisualBoyAdvance.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
                BlueprintIdentifier = "82D815AB0F1D882B00EF8CF5"
                BuildableName = "Build &amp; Install FCEU"
                BlueprintName = "Build &amp; Install FCEU"
                ReferencedContainer = "container:FCEU/FCEU.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "82D8155D0F1D878700EF8CF5"
-               BuildableName = "Build &amp; Install TwoMbit"
-               BlueprintName = "Build &amp; Install TwoMbit"
-               ReferencedContainer = "container:TwoMbit/TwoMbit.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -179,25 +193,11 @@
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "8CC8D3BA17A948E000BC796A"
-               BuildableName = "Build &amp; Install Higan"
-               BlueprintName = "Build &amp; Install Higan"
-               ReferencedContainer = "container:Higan/Higan.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
+            buildForTesting = "NO"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "D0AADE271763813100759E26"
@@ -298,20 +298,6 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "EB851D141523ABBA00715BD2"
-               BuildableName = "Build &amp; Install Yabause"
-               BlueprintName = "Build &amp; Install Yabause"
-               ReferencedContainer = "container:yabause/yabause/Yabause.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
                BlueprintIdentifier = "FED62A59187BE23C00A88500"
                BuildableName = "Build &amp; Install blueMSX"
                BlueprintName = "Build &amp; Install blueMSX"
@@ -396,10 +382,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "94C51FBC1847077700206E6F"
-               BuildableName = "Set Experimental Appcast URLs"
-               BlueprintName = "Set Experimental Appcast URLs"
-               ReferencedContainer = "container:OpenEmu/OpenEmu.xcodeproj">
+               BlueprintIdentifier = "081A45EE1B95639F00565444"
+               BuildableName = "Build and Install PokeMini"
+               BlueprintName = "Build and Install PokeMini"
+               ReferencedContainer = "container:PokeMini/PokeMini.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -410,10 +396,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "8D15AC270486D014006FF6A4"
-               BuildableName = "OpenEmu.app"
-               BlueprintName = "OpenEmu"
-               ReferencedContainer = "container:OpenEmu/OpenEmu.xcodeproj">
+               BlueprintIdentifier = "82D815AB0F1D882B00EF8CF5"
+               BuildableName = "Build &amp; Install mGBA"
+               BlueprintName = "Build &amp; Install mGBA"
+               ReferencedContainer = "container:mGBA/mGBA.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -424,19 +410,19 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "94EBBCD7183F422500743756"
-               BuildableName = "Build &amp; Copy Experimental SystemPlugins"
-               BlueprintName = "Build &amp; Copy Experimental SystemPlugins"
-               ReferencedContainer = "container:OpenEmu/OpenEmu.xcodeproj">
+               BlueprintIdentifier = "82B9195310150EA2007BD6DB"
+               BuildableName = "Build &amp; Install BSNES"
+               BlueprintName = "Build &amp; Install BSNES"
+               ReferencedContainer = "container:BSNES/BSNES.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
+      buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      shouldUseLaunchSchemeArgsEnv = "YES"
-      buildConfiguration = "Debug">
+      shouldUseLaunchSchemeArgsEnv = "YES">
       <PostActions>
          <ExecutionAction
             ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
@@ -455,8 +441,6 @@
             </ActionContent>
          </ExecutionAction>
       </PostActions>
-      <Testables>
-      </Testables>
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
@@ -466,15 +450,28 @@
             ReferencedContainer = "container:OpenEmu/OpenEmu.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
+      <Testables>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "05DB72A02532681B0098459D"
+               BuildableName = "OpenEmuTests.xctest"
+               BlueprintName = "OpenEmuTests"
+               ReferencedContainer = "container:OpenEmu/OpenEmu.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+      </Testables>
    </TestAction>
    <LaunchAction
+      buildConfiguration = "Release"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
-      buildConfiguration = "Debug"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
+      debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
       <PostActions>
          <ExecutionAction
@@ -494,7 +491,8 @@
             </ActionContent>
          </ExecutionAction>
       </PostActions>
-      <BuildableProductRunnable>
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "8D15AC270486D014006FF6A4"
@@ -503,14 +501,12 @@
             ReferencedContainer = "container:OpenEmu/OpenEmu.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <AdditionalOptions>
-      </AdditionalOptions>
    </LaunchAction>
    <ProfileAction
+      buildConfiguration = "Release"
       shouldUseLaunchSchemeArgsEnv = "YES"
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
-      buildConfiguration = "Release"
       debugDocumentVersioning = "YES">
       <PostActions>
          <ExecutionAction
@@ -530,7 +526,8 @@
             </ActionContent>
          </ExecutionAction>
       </PostActions>
-      <BuildableProductRunnable>
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "8D15AC270486D014006FF6A4"

@@ -24,10 +24,29 @@
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-#import <Foundation/Foundation.h>
+@import Foundation;
 #import "OEPreferencePane.h"
 
+extern NSString * const OEAppearancePreferenceKey;
+typedef NS_ENUM(NSInteger, OEAppearancePreferenceValue) {
+    OEAppearancePreferenceValueSystem,
+    OEAppearancePreferenceValueDark,
+    OEAppearancePreferenceValueLight,
+};
+
+extern NSString * const OEHUDBarAppearancePreferenceKey;
+typedef NS_ENUM(NSInteger, OEHUDBarAppearancePreferenceValue) {
+    OEHUDBarAppearancePreferenceValueVibrant,
+    OEHUDBarAppearancePreferenceValueDark,
+};
+
+extern NSString * const OEControlsPrefsAppearancePreferenceKey;
+typedef NS_ENUM(NSInteger, OEControlsPrefsAppearancePreferenceValue) {
+    OEControlsPrefsAppearancePreferenceValueWood,
+    OEControlsPrefsAppearancePreferenceValueLumberjack,
+    OEControlsPrefsAppearancePreferenceValueWoodVibrant,
+};
+
 @interface OEPrefDebugController : NSViewController <OEPreferencePane>
-@property (assign) IBOutlet NSTableView *tableView;
+@property (weak, nonatomic) IBOutlet NSGridView *contentView;
 @end

@@ -24,13 +24,32 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Cocoa/Cocoa.h>
-#import "OELibrarySubviewController.h"
+@import Cocoa;
+@import Quartz;
 #import "OECollectionViewController.h"
 
-@interface OEMediaViewController : OECollectionViewController <OELibrarySubviewController, OEBlankSlateViewDelegate>
+@class OEDBSaveState, OEDBScreenshot;
 
-- (NSArray*)selectedSaveStates;
+extern NSNotificationName const OEMediaViewControllerDidSetSelectionIndexesNotification;
+
+@interface OEMediaViewController : OECollectionViewController <OEBlankSlateViewDelegate, NSMenuItemValidation>
+
+@property (readonly) BOOL saveStateMode;
+
+@property (readonly) NSArray <OEDBSaveState *> *selectedSaveStates;
+@property (readonly) NSArray <OEDBScreenshot *> *selectedScreenshots;
+
+#pragma mark - Commands
+
+- (void)performSearch:(NSString *)text;
+
+#pragma mark - Actions
+
 - (IBAction)showInFinder:(id)sender;
+- (IBAction)search:(id)sender;
+- (IBAction)changeGridSize:(id)sender;
+- (IBAction)decreaseGridSize:(id)sender;
+- (IBAction)increaseGridSize:(id)sender;
+- (IBAction)deleteSelectedItems:(id)sender;
 
 @end

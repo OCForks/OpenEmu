@@ -8,8 +8,6 @@
 
 #import "OEGridGameCell.h"
 
-#import "OETheme.h"
-#import "NSImage+OEDrawingAdditions.h"
 #import "OECoverGridDataSourceItem.h"
 #import "OEGridViewCellIndicationLayer.h"
 
@@ -17,32 +15,29 @@
 
 #import "OEGameGridViewDelegate.h"
 
-static const CGFloat OEGridCellTitleHeight                      = 16.0;        // Height of the title view
-static const CGFloat OEGridCellImageTitleSpacing                = 17.0;        // Space between the image and the title
-static const CGFloat OEGridCellSubtitleHeight                   = 11.0;        // Subtitle height
-static const CGFloat OEGridCellSubtitleWidth                    = 56.0;        // Subtitle's width
-static const CGFloat OEGridCellGlossWidthToHeightRatio          = 0.6442;      // Gloss image's width to height ratio
+#import "OpenEmu-Swift.h"
+
+static const CGFloat OEGridCellTitleHeight                      = 16.0; // Height of the title view
+static const CGFloat OEGridCellImageTitleSpacing                = 17.0; // Space between the image and the title
+static const CGFloat OEGridCellSubtitleHeight                   = 11.0; // Subtitle height
+static const CGFloat OEGridCellSubtitleWidth                    = 56.0; // Subtitle width
+static const CGFloat OEGridCellSubtitleTitleSpace               = 4.0;  // Space between title and subtitle
 
 static const CGFloat OEGridCellImageContainerLeft   = 13.0;
 static const CGFloat OEGridCellImageContainerTop    = 7.0;
 static const CGFloat OEGridCellImageContainerRight  = 13.0;
-static const CGFloat OEGridCellImageContainerBottom = OEGridCellTitleHeight + OEGridCellImageTitleSpacing + OEGridCellSubtitleHeight;
-
-__strong static OEThemeImage *selectorRingImage = nil;
+static const CGFloat OEGridCellImageContainerBottom = OEGridCellTitleHeight + OEGridCellImageTitleSpacing + OEGridCellSubtitleHeight + OEGridCellSubtitleTitleSpace;
 
 
-@interface OEGridGameCell ()
+@interface OEGridGameCell () <CALayerDelegate>
 @property NSImage *selectorImage;
 @property CALayer *selectionLayer;
 
 @property CALayer     *foregroundLayer;
 @property CATextLayer *textLayer;
 @property CALayer     *ratingLayer;
-@property CALayer     *glossyLayer;
 @property CALayer     *backgroundLayer;
 @property CALayer     *missingArtworkLayer;
-@property CALayer     *downloadLayer;
-@property OEThemeState downloadButtonState;
 
 @property OEGridViewCellIndicationLayer *indicationLayer;
 
@@ -79,11 +74,6 @@ static NSDictionary *disabledActions = nil;
 
     if(self)
     {
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            selectorRingImage = [[OETheme sharedTheme] themeImageForKey:@"selector_ring"];
-        });
-
         if(disabledActions == nil)
             disabledActions = @{ @"position" : [NSNull null],
                                    @"bounds" : [NSNull null],
@@ -119,7 +109,7 @@ static NSDictionary *disabledActions = nil;
     frame.size.width = [self frame].size.width;
     frame.size.height = OEGridCellTitleHeight;
     frame.origin.x = [self frame].origin.x;
-    frame.origin.y = [self frame].origin.y + OEGridCellSubtitleHeight;
+    frame.origin.y = [self frame].origin.y + OEGridCellSubtitleHeight + OEGridCellSubtitleTitleSpace;
 
     return frame;
 }
@@ -139,32 +129,6 @@ static NSDictionary *disabledActions = nil;
 - (NSRect)selectionFrame
 {
     return [self imageFrame];
-}
-
-- (NSRect)downloadButtonFrame
-{
-    const NSRect  frame = [self imageFrame];
-    CGFloat width = 47.0, height = 73.0;
-
-    if(NSWidth(frame) <= width)
-    {
-        const CGFloat ar = height/width;
-        width = ceilf(NSWidth(frame));
-        height = ceilf(width * ar);
-    }
-    if(NSHeight(frame) <= height)
-    {
-        const CGFloat ar = width/height;
-        height = ceilf(NSHeight(frame));
-        width = ceilf(height * ar);
-    }
-
-    return NSMakeRect(NSMaxX(frame)-width+1, NSMaxY(frame)-height+1, width, height);
-}
-
-- (NSRect)deleteButtonFrame
-{
-    return NSMakeRect(0, 0, 25, 25);
 }
 
 - (NSRect)OE_relativeFrameFromFrame:(NSRect)rect
@@ -190,110 +154,13 @@ static NSDictionary *disabledActions = nil;
     return [self OE_relativeFrameFromFrame:[self ratingFrame]];
 }
 
-- (NSRect)relativeDownloadButtonFrame
-{
-    return [self OE_relativeFrameFromFrame:[self downloadButtonFrame]];
-}
-
-- (NSRect)relativeDeleteButtonFrame
-{
-    return [self OE_relativeFrameFromFrame:[self deleteButtonFrame]];
-}
-
 - (NSPoint)convertPointFromViewToForegroundLayer:(NSPoint)p
 {
     NSRect frame = [self frame];
 
     return NSMakePoint(p.x-frame.origin.x, p.y-frame.origin.y);
 }
-#pragma mark - Interaction
-- (BOOL)isInteractive
-{
-    return [[self representedItem] shouldIndicateDownloadable];
-}
 
-#define LocationInDownloadLayer() NSPointInTriangle(location, (NSPoint){47,0}, (NSPoint){0,73}, (NSPoint){47,73})
-- (BOOL)mouseEntered:(NSEvent *)theEvent
-{
-    NSPoint locationInWindow = [theEvent locationInWindow];
-    NSPoint location = [[self imageBrowserView] convertPoint:locationInWindow fromView:nil];
-    location = [self convertPointFromViewToForegroundLayer:location];
-    location = [_downloadLayer convertPoint:location fromLayer:_foregroundLayer];
-    if(LocationInDownloadLayer())
-    {
-        _downloadButtonState |= OEThemeInputStateMouseOver;
-        _downloadButtonState &= ~OEThemeInputStateMouseOff;
-
-        [[self imageBrowserView] reloadCellDataAtIndex:[self indexOfRepresentedItem]];
-        return YES;
-    }
-    else
-    {
-        _downloadButtonState |= OEThemeInputStateMouseOff;
-        _downloadButtonState &= ~OEThemeInputStateMouseOver;
-
-        [[self imageBrowserView] reloadCellDataAtIndex:[self indexOfRepresentedItem]];
-        return NO;
-    }
-    return YES;
-}
-
-- (BOOL)mouseMoved:(NSEvent*)theEvent
-{
-    return [self mouseEntered:theEvent];
-}
-
-- (void)mouseExited:(NSEvent*)theEvent
-{
-    _downloadButtonState = OEThemeStateDefault;
-    [[self imageBrowserView] reloadCellDataAtIndex:[self indexOfRepresentedItem]];
-}
-
-- (BOOL)mouseDown:(NSEvent*)theEvent
-{
-    NSPoint locationInWindow = [theEvent locationInWindow];
-    NSPoint location = [[self imageBrowserView] convertPoint:locationInWindow fromView:nil];
-    location = [self convertPointFromViewToForegroundLayer:location];
-    location = [_downloadLayer convertPoint:location fromLayer:_foregroundLayer];
-
-    if(LocationInDownloadLayer())
-    {
-        _downloadButtonState = OEThemeInputStatePressed | OEThemeInputStateMouseOver;
-        [[self imageBrowserView] reloadCellDataAtIndex:[self indexOfRepresentedItem]];
-        return YES;
-    }
-    else
-    {
-        _downloadButtonState = OEThemeStateDefault;
-        [[self imageBrowserView] reloadCellDataAtIndex:[self indexOfRepresentedItem]];
-        return NO;
-    }
-}
-
-- (void)mouseUp:(NSEvent*)theEvent
-{
-    _downloadButtonState &= ~OEThemeInputStatePressed;
-
-    NSPoint locationInWindow = [theEvent locationInWindow];
-    NSPoint location = [[self imageBrowserView] convertPoint:locationInWindow fromView:nil];
-    location = [self convertPointFromViewToForegroundLayer:location];
-    location = [_downloadLayer convertPoint:location fromLayer:_foregroundLayer];
-    if(LocationInDownloadLayer())
-    {
-        // call method in delegate
-        id delegate = [[self imageBrowserView] delegate];
-        if([delegate conformsToProtocol:@protocol(OEGameGridViewDelegate)])
-        {
-            [delegate gridView:[self imageBrowserView] requestsDownloadRomForItemAtIndex:[self indexOfRepresentedItem]];
-        }
-    }
-    [[self imageBrowserView] reloadCellDataAtIndex:[self indexOfRepresentedItem]];
-}
-
-- (NSRect)trackingRect
-{
-    return [self downloadButtonFrame];
-}
 #pragma mark - Apple Private Overrides
 - (BOOL)acceptsDrop
 {
@@ -310,24 +177,23 @@ static NSDictionary *disabledActions = nil;
 #pragma mark - Layers & Images
 - (void)OE_setupLayers
 {
+    NSAppearance.currentAppearance = self.imageBrowserView.effectiveAppearance;
+    
     _foregroundLayer = [CALayer layer];
     [_foregroundLayer setActions:disabledActions];
 
     // setup title layer
-    NSFont *titleFont = [[NSFontManager sharedFontManager] fontWithFamily:@"Lucida Grande" traits:NSBoldFontMask weight:9 size:12];
+    const CGFloat titleFontSize = [NSFont systemFontSize];
+    NSFont *titleFont = [NSFont systemFontOfSize:titleFontSize weight:NSFontWeightMedium];
     _textLayer = [CATextLayer layer];
     [_textLayer setActions:disabledActions];
 
     [_textLayer setAlignmentMode:kCAAlignmentCenter];
     [_textLayer setTruncationMode:kCATruncationEnd];
-    [_textLayer setForegroundColor:[[NSColor whiteColor] CGColor]];
+    [_textLayer setForegroundColor:NSColor.labelColor.CGColor];
     [_textLayer setFont:(__bridge CTFontRef)titleFont];
-    [_textLayer setFontSize:12.0];
+    [_textLayer setFontSize:titleFontSize];
 
-    [_textLayer setShadowColor:[[NSColor blackColor] CGColor]];
-    [_textLayer setShadowOffset:CGSizeMake(0.0, -1.0)];
-    [_textLayer setShadowRadius:1.0];
-    [_textLayer setShadowOpacity:1.0];
     [_foregroundLayer addSublayer:_textLayer];
 
     // setup rating layer
@@ -339,11 +205,6 @@ static NSDictionary *disabledActions = nil;
     [_missingArtworkLayer setActions:disabledActions];
     [_foregroundLayer addSublayer:_missingArtworkLayer];
 
-    // setup gloss layer
-    _glossyLayer = [CALayer layer];
-    [_glossyLayer setActions:disabledActions];
-    [_foregroundLayer addSublayer:_glossyLayer];
-
     _indicationLayer = [[OEGridViewCellIndicationLayer alloc] init];
     [_indicationLayer setType:OEGridViewCellIndicationTypeNone];
     [_foregroundLayer addSublayer:_indicationLayer];
@@ -352,15 +213,15 @@ static NSDictionary *disabledActions = nil;
     _backgroundLayer = [CALayer layer];
     [_backgroundLayer setActions:disabledActions];
     [_backgroundLayer setShadowColor:[[NSColor blackColor] CGColor]];
-    [_backgroundLayer setShadowOffset:CGSizeMake(0.0, -3.0)];
-    [_backgroundLayer setShadowRadius:3.0];
+    [_backgroundLayer setShadowOffset:CGSizeMake(0.0, -1.0)];
+    [_backgroundLayer setShadowRadius:1.0];
     [_backgroundLayer setContentsGravity:kCAGravityResize];
-
-    _downloadButtonState = OEThemeStateDefault;
 }
 
 - (CALayer *)layerForType:(NSString *)type
 {
+    NSAppearance.currentAppearance = self.imageBrowserView.effectiveAppearance;
+    
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
 
@@ -422,21 +283,15 @@ static NSDictionary *disabledActions = nil;
         // Setup rating layer
         NSUInteger    rating = [representedItem gridRating];
         NSImage *ratingImage = [self OE_ratingImageForRating:rating];
+        CGImageRef resolvedRating = [ratingImage CGImageForProposedRect:NULL context:nil hints:nil];
 
-        [_ratingLayer setContentsGravity:kCAGravityCenter];
+        [_ratingLayer setContentsGravity:kCAGravityResizeAspect];
         [_ratingLayer setContentsScale:scaleFactor];
         [_ratingLayer setFrame:relativeRatingFrame];
-        [_ratingLayer setContents:ratingImage];
+        [_ratingLayer setContents:(__bridge id)resolvedRating];
 
-		// add a glossy overlay if image is loaded
         if(state == IKImageStateReady)
         {
-            NSImage *glossyImage = [self OE_glossImageWithSize:relativeImageFrame.size];
-            [_glossyLayer setContentsScale:scaleFactor];
-            [_glossyLayer setFrame:relativeImageFrame];
-            [_glossyLayer setContents:glossyImage];
-            [_glossyLayer setHidden:NO];
-
             if([identifier characterAtIndex:0]==':' && !NSEqualSizes(relativeImageFrame.size, _lastImageSize))
             {
                 NSImage *missingArtworkImage = [self missingArtworkImageWithSize:relativeImageFrame.size];
@@ -456,7 +311,6 @@ static NSDictionary *disabledActions = nil;
         }
         else
         {
-            [_glossyLayer setHidden:YES];
             [_proposedImageLayer removeFromSuperlayer];
             [_indicationLayer setType:OEGridViewCellIndicationTypeNone];
         }
@@ -474,12 +328,16 @@ static NSDictionary *disabledActions = nil;
 
             CGRect selectionFrame = CGRectInset(relativeImageFrame, -6.0, -6.0);
             CALayer *selectionLayer = [CALayer layer];
-            [selectionLayer setActions:disabledActions];
-            [selectionLayer setFrame:selectionFrame];
-            [selectionLayer setEdgeAntialiasingMask:NSViewWidthSizable|NSViewMaxYMargin];
-
-            NSImage *selectorImage = [self OE_selectorImageWithSize:selectionFrame.size];
-            [selectionLayer setContents:selectorImage];
+            selectionLayer.actions = disabledActions;
+            selectionLayer.frame = selectionFrame;
+            
+            NSColor *selectionColor = NSColor.selectedContentBackgroundColor;
+            NSColor *inactiveSelectionColor = NSColor.unemphasizedSelectedContentBackgroundColor;
+            
+            selectionLayer.borderWidth = 4.0;
+            selectionLayer.borderColor = _lastWindowActive ? selectionColor.CGColor : inactiveSelectionColor.CGColor;
+            selectionLayer.cornerRadius = 3.0;
+            
             [_foregroundLayer addSublayer:selectionLayer];
 
             _selectionLayer = selectionLayer;
@@ -488,27 +346,6 @@ static NSDictionary *disabledActions = nil;
         {
             [_selectionLayer removeFromSuperlayer];
             _selectionLayer = nil;
-        }
-
-        if([representedItem shouldIndicateDownloadable])
-        {
-            if(_downloadLayer == nil)
-            {
-                _downloadLayer = [CALayer layer];
-                [_downloadLayer setContentsGravity:kCAGravityResizeAspect];
-                [_downloadLayer setActions:disabledActions];
-                [[_glossyLayer superlayer] insertSublayer:_downloadLayer below:_glossyLayer];
-            }
-
-            OEThemeImage *image = [[OETheme sharedTheme] themeImageForKey:@"grid_download"];
-            [_downloadLayer setContents:[image imageForState:_downloadButtonState]];
-            [_downloadLayer setFrame:[self relativeDownloadButtonFrame]];
-            [_downloadLayer setContentsScale:scaleFactor];
-        }
-        else
-        {
-            [_downloadLayer removeFromSuperlayer];
-            _downloadLayer = nil;
         }
 
 		[CATransaction commit];
@@ -606,70 +443,6 @@ static NSDictionary *disabledActions = nil;
     [[[self imageBrowserView] backgroundLayer] setValue:image forKey:name];
 }
 
-- (NSImage *)OE_glossImageWithSize:(NSSize)size
-{
-    if([[NSUserDefaults standardUserDefaults] boolForKey:OECoverGridViewGlossDisabledKey]) return nil;
-    if(NSEqualSizes(size, NSZeroSize)) return nil;
-
-    static NSCache *cache = nil;
-    if(cache == nil)
-    {
-        cache = [[NSCache alloc] init];
-        [cache setCountLimit:30];
-    }
-
-    NSString *key = NSStringFromSize(size);
-    NSImage *glossImage = [cache objectForKey:key];
-    if(glossImage) return glossImage;
-
-    BOOL(^drawingBlock)(NSRect) = ^BOOL(NSRect dstRect)
-    {
-        NSGraphicsContext *currentContext = [NSGraphicsContext currentContext];
-
-        // Draw gloss image fit proportionally within the cell
-        NSImage *boxGlossImage = [NSImage imageNamed:@"box_gloss"];
-        CGRect   boxGlossFrame = CGRectMake(0.0, 0.0, size.width, floor(size.width * OEGridCellGlossWidthToHeightRatio));
-        boxGlossFrame.origin.y = size.height - CGRectGetHeight(boxGlossFrame);
-        [boxGlossImage drawInRect:boxGlossFrame fromRect:NSZeroRect operation:NSCompositeCopy fraction:1.0];
-
-        [currentContext saveGraphicsState];
-        [currentContext setShouldAntialias:YES];
-
-        const NSRect bounds = NSMakeRect(0.0, 0.0, size.width-0.5, size.height-0.5);
-        [[NSColor colorWithCalibratedWhite:1.0 alpha:0.4] setStroke];
-        [[NSBezierPath bezierPathWithRect:NSOffsetRect(bounds, 0.0, -1.0)] stroke];
-
-        [[NSColor blackColor] setStroke];
-        NSBezierPath *path = [NSBezierPath bezierPathWithRect:bounds];
-        [path stroke];
-
-        [currentContext restoreGraphicsState];
-
-        return YES;
-    };
-
-    int major, minor;
-    GetSystemVersion(&major, &minor, NULL);
-    if(major == 10 && minor >= 8)
-    {
-        glossImage = [NSImage imageWithSize:size flipped:NO drawingHandler:drawingBlock];
-    }
-    else
-    {
-        NSRect dstRect = (NSRect){{0,0}, size};
-        glossImage = [[NSImage alloc] initWithSize:size];
-        [glossImage lockFocus];
-
-        drawingBlock(dstRect);
-
-        [glossImage unlockFocus];
-    }
-
-    [cache setObject:glossImage forKey:key cost:size.height*size.width];
-
-    return glossImage;
-}
-
 - (NSImage *)missingArtworkImageWithSize:(NSSize)size
 {
     return [[self class] missingArtworkImageWithSize:size];
@@ -704,7 +477,7 @@ static NSDictionary *disabledActions = nil;
     for(CGFloat y = 0.0; y < size.height; y += scanLineImageSize.height)
     {
         scanLineRect.origin.y = y;
-        [scanLineImage drawInRect:scanLineRect fromRect:NSZeroRect operation:NSCompositeCopy fraction:1.0];
+        [scanLineImage drawInRect:scanLineRect fromRect:NSZeroRect operation:NSCompositingOperationCopy fraction:1.0];
     }
 
     [currentContext restoreGraphicsState];
@@ -714,79 +487,6 @@ static NSDictionary *disabledActions = nil;
     [cache setObject:missingArtwork forKey:key cost:size.width*size.height];
 
     return missingArtwork;
-}
-
-- (NSImage *)OE_selectorImageWithSize:(NSSize)size
-{
-    if(NSEqualSizes(size, NSZeroSize)) return nil;
-
-    NSString *imageKey       = [NSString stringWithFormat:@"OEGridCellSelectionImage(%d)", _lastWindowActive];
-    NSImage  *selectionImage = [self OE_standardImageNamed:imageKey withSize:size];
-    if(selectionImage) return selectionImage;
-
-    BOOL(^drawingBlock)(NSRect) = ^BOOL(NSRect dstRect)
-    {
-        NSGraphicsContext *currentContext = [NSGraphicsContext currentContext];
-        [currentContext saveGraphicsState];
-        [currentContext setShouldAntialias:NO];
-
-        // Draw gradient
-        const CGRect bounds = CGRectMake(0.0, 0.0, dstRect.size.width, dstRect.size.height);
-        NSBezierPath *gradientPath = [NSBezierPath bezierPathWithRoundedRect:CGRectInset(bounds, 2.0, 3.0) xRadius:8.0 yRadius:8.0];
-        [gradientPath appendBezierPath:[NSBezierPath bezierPathWithRoundedRect:CGRectInset(bounds, 8.0, 8.0) xRadius:1.0 yRadius:1.0]];
-        [gradientPath setWindingRule:NSEvenOddWindingRule];
-
-        NSColor *topColor;
-        NSColor *bottomColor;
-
-        if(_lastWindowActive)
-        {
-            topColor = [NSColor colorWithCalibratedRed:0.243 green:0.502 blue:0.871 alpha:1.0];
-            bottomColor = [NSColor colorWithCalibratedRed:0.078 green:0.322 blue:0.667 alpha:1.0];
-        }
-        else
-        {
-            topColor = [NSColor colorWithCalibratedWhite:0.651 alpha:1.0];
-            bottomColor = [NSColor colorWithCalibratedWhite:0.439 alpha:1.0];
-        }
-
-        NSGradient *gradient = [[NSGradient alloc] initWithStartingColor:topColor endingColor:bottomColor];
-        [gradient drawInBezierPath:gradientPath angle:270.0];
-
-        [currentContext restoreGraphicsState];
-        [currentContext saveGraphicsState];
-
-        // Draw selection border
-        OEThemeState currentState = [OEThemeObject themeStateWithWindowActive:YES buttonState:NSMixedState selected:NO enabled:YES focused:_lastWindowActive houseHover:YES modifierMask:YES];
-        NSImage *image = [selectorRingImage imageForState:currentState];
-        [image drawInRect:dstRect fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:1.0];
-
-        [currentContext restoreGraphicsState];
-
-        return YES;
-    };
-
-    int major, minor;
-    GetSystemVersion(&major, &minor, NULL);
-    if(major == 10 && minor >= 8)
-    {
-        selectionImage = [NSImage imageWithSize:size flipped:NO drawingHandler:drawingBlock];
-    }
-    else
-    {
-        selectionImage = [[NSImage alloc] initWithSize:size];
-        [selectionImage lockFocus];
-
-        NSRect destinationRect = (NSRect){{0,0}, size};
-        drawingBlock(destinationRect);
-
-        [selectionImage unlockFocus];
-    }
-
-    // Cache the image for later use
-    [self OE_setStandardImage:selectionImage named:imageKey];
-
-    return selectionImage;
 }
 
 - (NSImage*)OE_ratingImageForRating:(NSInteger)rating
@@ -805,8 +505,9 @@ static NSDictionary *disabledActions = nil;
 
 - (NSImage*)OE_newRatingImageForRating:(NSInteger)rating
 {
+    NSAppearance.currentAppearance = self.imageBrowserView.effectiveAppearance;
     const NSUInteger OECoverGridViewCellRatingViewNumberOfRatings = 6;
-    const NSImage *ratingImage    = [NSImage imageNamed:@"grid_rating"];
+    const NSImage *ratingImage = [[NSImage imageNamed:@"grid_rating"] imageWithTintColor:NSColor.controlAccentColor];
     const NSSize  ratingImageSize = [ratingImage size];
     const CGFloat ratingStarHeight      = ratingImageSize.height / OECoverGridViewCellRatingViewNumberOfRatings;
     const NSRect  ratingImageSourceRect = NSMakeRect(0.0, ratingImageSize.height - ratingStarHeight * (rating + 1.0), ratingImageSize.width, ratingStarHeight);
@@ -836,24 +537,24 @@ static NSDictionary *disabledActions = nil;
     // Create fade animation for the status indicator
     CABasicAnimation *indicatorFadeAnimation = [CABasicAnimation animationWithKeyPath:@"opacity"];
     [indicatorFadeAnimation setDuration:(7.0 * durationMultiplier) / framesPerSecond];
-    [indicatorFadeAnimation setFromValue:[NSNumber numberWithFloat:0.0]];
-    [indicatorFadeAnimation setToValue:[NSNumber numberWithFloat:1.0]];
+    [indicatorFadeAnimation setFromValue:@0.0f];
+    [indicatorFadeAnimation setToValue:@1.0];
 
     // Create fade animation for the image
     CAKeyframeAnimation *imageFadeAnimation = [CAKeyframeAnimation animationWithKeyPath:@"opacity"];
     [imageFadeAnimation setDuration:(13.0 * durationMultiplier) / framesPerSecond];
-    [imageFadeAnimation setKeyTimes:[NSArray arrayWithObjects:
-                                     [NSNumber numberWithFloat:0.0],
-                                     [NSNumber numberWithFloat:(4.0 * durationMultiplier) / ([imageFadeAnimation duration] * framesPerSecond)],
-                                     [NSNumber numberWithFloat:(9.0 * durationMultiplier) / ([imageFadeAnimation duration] * framesPerSecond)],
-                                     [NSNumber numberWithFloat:1.0],
-                                     nil]];
-    [imageFadeAnimation setValues:[NSArray arrayWithObjects:
-                                   [NSNumber numberWithFloat:0.0],
-                                   [NSNumber numberWithFloat:0.0],
-                                   [NSNumber numberWithFloat:0.8],
-                                   [NSNumber numberWithFloat:1.0],
-                                   nil]];
+    [imageFadeAnimation setKeyTimes:@[
+                                     @0.0f,
+                                     @((4.0 * durationMultiplier) / ([imageFadeAnimation duration] * framesPerSecond)),
+                                     @((9.0 * durationMultiplier) / ([imageFadeAnimation duration] * framesPerSecond)),
+                                     @1.0f,
+                                     ]];
+    [imageFadeAnimation setValues:@[
+                                   @0.0f,
+                                   @0.0f,
+                                   @0.8f,
+                                   @1.0f,
+                                   ]];
 
     // Create resize animation for the image
     const NSRect fromFrame  = CGRectMake(0.0, 0.0, CGRectGetWidth(imageRect) * 0.55, CGRectGetHeight(imageRect) * 0.55);
@@ -863,17 +564,17 @@ static NSDictionary *disabledActions = nil;
     CAKeyframeAnimation *imageResizeAnimation = [CAKeyframeAnimation animationWithKeyPath:@"bounds"];
     [imageResizeAnimation setDuration:[imageFadeAnimation duration]];
     [imageResizeAnimation setKeyTimes:[imageFadeAnimation keyTimes]];
-    [imageResizeAnimation setValues:[NSArray arrayWithObjects:
+    [imageResizeAnimation setValues:@[
                                      [NSValue valueWithRect:fromFrame],
                                      [NSValue valueWithRect:fromFrame],
                                      [NSValue valueWithRect:largeFrame],
                                      [NSValue valueWithRect:toFrame],
-                                     nil]];
-    [imageResizeAnimation setTimingFunctions:[NSArray arrayWithObjects:
+                                     ]];
+    [imageResizeAnimation setTimingFunctions:@[
                                               [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionDefault],
                                               [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut],
                                               [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseIn],
-                                              nil]];
+                                              ]];
 
     // Set the layers to what we want them to be
     [_indicationLayer setOpacity:1.0f];
@@ -904,24 +605,24 @@ static NSDictionary *disabledActions = nil;
     // Create fade animation for the status indicator
     CABasicAnimation *indicatorFadeAnimation = [CABasicAnimation animationWithKeyPath:@"opacity"];
     [indicatorFadeAnimation setDuration:(7.0 * durationMultiplier) / framesPerSecond];
-    [indicatorFadeAnimation setFromValue:[NSNumber numberWithFloat:1.0]];
-    [indicatorFadeAnimation setToValue:[NSNumber numberWithFloat:0.0]];
+    [indicatorFadeAnimation setFromValue:@1.0];
+    [indicatorFadeAnimation setToValue:@0.0f];
 
     // Create fade animation for the image
     CAKeyframeAnimation *imageFadeAnimation = [CAKeyframeAnimation animationWithKeyPath:@"opacity"];
     [imageFadeAnimation setDuration:(13.0 * durationMultiplier) / framesPerSecond];
-    [imageFadeAnimation setKeyTimes:[NSArray arrayWithObjects:
-                                     [NSNumber numberWithFloat:0.0],
-                                     [NSNumber numberWithFloat:(4.0 * durationMultiplier) / ([imageFadeAnimation duration] * framesPerSecond)],
-                                     [NSNumber numberWithFloat:(9.0 * durationMultiplier) / ([imageFadeAnimation duration] * framesPerSecond)],
-                                     [NSNumber numberWithFloat:1.0],
-                                     nil]];
-    [imageFadeAnimation setValues:[NSArray arrayWithObjects:
-                                   [NSNumber numberWithFloat:1.0],
-                                   [NSNumber numberWithFloat:1.0],
-                                   [NSNumber numberWithFloat:0.8],
-                                   [NSNumber numberWithFloat:0.0],
-                                   nil]];
+    [imageFadeAnimation setKeyTimes:@[
+                                     @0.0f,
+                                     @((4.0 * durationMultiplier) / ([imageFadeAnimation duration] * framesPerSecond)),
+                                     @((9.0 * durationMultiplier) / ([imageFadeAnimation duration] * framesPerSecond)),
+                                     @1.0f,
+                                     ]];
+    [imageFadeAnimation setValues:@[
+                                   @1.0f,
+                                   @1.0f,
+                                   @0.8f,
+                                   @0.0f,
+                                   ]];
 
     // Create resize animation for the image
     const CGRect imageRect  = [self relativeImageFrame];
@@ -932,17 +633,17 @@ static NSDictionary *disabledActions = nil;
     CAKeyframeAnimation *imageResizeAnimation = [CAKeyframeAnimation animationWithKeyPath:@"bounds"];
     [imageResizeAnimation setDuration:[imageFadeAnimation duration]];
     [imageResizeAnimation setKeyTimes:[imageFadeAnimation keyTimes]];
-    [imageResizeAnimation setValues:[NSArray arrayWithObjects:
+    [imageResizeAnimation setValues:@[
                                      [NSValue valueWithRect:fromFrame],
                                      [NSValue valueWithRect:fromFrame],
                                      [NSValue valueWithRect:largeFrame],
                                      [NSValue valueWithRect:toFrame],
-                                     nil]];
-    [imageResizeAnimation setTimingFunctions:[NSArray arrayWithObjects:
+                                     ]];
+    [imageResizeAnimation setTimingFunctions:@[
                                               [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionDefault],
                                               [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut],
                                               [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseIn],
-                                              nil]];
+                                              ]];
 
     // Set the layers to what we want them to be
     [_indicationLayer setOpacity:0.0f];
@@ -953,15 +654,15 @@ static NSDictionary *disabledActions = nil;
     [NSAnimationContext runAnimationGroup:
      ^ (NSAnimationContext *context)
      {
-         [_indicationLayer addAnimation:indicatorFadeAnimation forKey:@"opacity"];
-         [_proposedImageLayer addAnimation:imageFadeAnimation forKey:@"opacity"];
-         [_proposedImageLayer addAnimation:imageResizeAnimation forKey:@"bounds"];
+         [self->_indicationLayer addAnimation:indicatorFadeAnimation forKey:@"opacity"];
+         [self->_proposedImageLayer addAnimation:imageFadeAnimation forKey:@"opacity"];
+         [self->_proposedImageLayer addAnimation:imageResizeAnimation forKey:@"bounds"];
      }
                         completionHandler:
      ^{
-         [_indicationLayer setOpacity:1.0];
-         [_proposedImageLayer removeFromSuperlayer];
-         _proposedImageLayer = nil;
+         [self->_indicationLayer setOpacity:1.0];
+         [self->_proposedImageLayer removeFromSuperlayer];
+         self->_proposedImageLayer = nil;
          [self OE_updateIndicationLayer];
      }];
 }

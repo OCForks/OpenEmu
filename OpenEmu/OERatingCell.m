@@ -24,7 +24,6 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #import "OERatingCell.h"
-#import "NSImage+OEDrawingAdditions.h"
 
 @implementation OERatingCell
 
@@ -32,24 +31,21 @@
 
 - (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView
 {
-	OEUIState state = OEUIStateInactive;
-	if([self isHighlighted]) state = OEUIStateActive;
-
 	NSImage *image = [NSImage imageNamed:@"list_rating"];
 
-	NSRect sourceRect = [self imageRectForRating:[[self objectValue] intValue] state:state];
+	NSRect sourceRect = [self imageRectForRating:[[self objectValue] intValue]];
 	NSRect targetRect = NSMakeRect(floor(cellFrame.origin.x + (cellFrame.size.width - sourceRect.size.width) / 2),
                                    floor(cellFrame.origin.y + (cellFrame.size.height - sourceRect.size.height) / 2),
                                    sourceRect.size.width,
                                    sourceRect.size.height);
-	[image drawInRect:targetRect fromRect:sourceRect operation:NSCompositeSourceOver fraction:1.0 respectFlipped:YES hints:nil];
+    [image drawInRect:targetRect fromRect:sourceRect operation:NSCompositingOperationSourceOver fraction:1.0 respectFlipped:YES hints:nil];
 }
 
-- (NSRect)imageRectForRating:(NSInteger)rating state:(OEUIState)state
+- (NSRect)imageRectForRating:(NSInteger)rating
 {
 	NSRect imageRect = NSMakeRect(55, 55 - (rating * 11), 55, 11);
     
-	if(state == OEUIStateInactive) imageRect.origin.x = 0;
+	if(!self.isHighlighted) imageRect.origin.x = 0;
 	
 	return imageRect;
 }

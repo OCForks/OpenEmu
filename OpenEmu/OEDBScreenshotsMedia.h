@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2013, OpenEmu Team
+ Copyright (c) 2015, OpenEmu Team
  
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -24,9 +24,15 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Foundation/Foundation.h>
+@import Foundation;
+
 #import "OESidebarItem.h"
 #import "OECollectionViewItemProtocol.h"
+
+NS_ASSUME_NONNULL_BEGIN
+
 @interface OEDBScreenshotsMedia : NSObject <OESidebarItem, OECollectionViewItemProtocol>
-+ (instancetype)sharedDBScreenshotsMedia;
+@property(class, readonly) OEDBScreenshotsMedia *sharedDBScreenshotsMedia;
 @end
+
+NS_ASSUME_NONNULL_END

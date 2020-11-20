@@ -26,16 +26,9 @@
 
 #import "OEGridView.h"
 
-#import "OETheme.h"
-
-#import <QuickLook/QuickLook.h>
-
 #import "OEGridGameCell.h"
 #import "OEGridViewFieldEditor.h"
-#import "OEBackgroundNoisePattern.h"
 #import "OECoverGridDataSourceItem.h"
-
-#import "OEMenu.h"
 
 #pragma mark - ImageKit Private Headers
 #import "IKImageBrowserView.h"
@@ -47,14 +40,19 @@
 #pragma mark -
 NSSize const defaultGridSize = (NSSize){26+142, 143};
 NSString *const OEImageBrowserGroupSubtitleKey = @"OEImageBrowserGroupSubtitleKey";
-NSString *const OECoverGridViewGlossDisabledKey = @"OECoverGridViewGlossDisabledKey";
 
-@implementation IKCGRenderer (ScaleFactorAdditions)
+//Removed the Category (ScaleFactorAdditions) in the IKCGRenderer implementation, for Compatibility with MacOS 10.14(beta 5)
+//With this temporary fix the App compiles in XCode 10b and Runs without crashing on startup on Mojave
+
+#pragma GCC diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
+@implementation IKCGRenderer /*(ScaleFactorAdditions)*/
 - (unsigned long long)scaleFactor
 {
     return self->_currentScaleFactor ?: 1.0;
 }
 @end
+#pragma GCC diagnostic pop
 
 @interface NSView (ApplePrivate)
 - (void)setClipsToBounds:(BOOL)arg1;
@@ -69,29 +67,12 @@ NSString *const OECoverGridViewGlossDisabledKey = @"OECoverGridViewGlossDisabled
 @property OEGridCell *trackingCell;
 @property OEGridViewFieldEditor *fieldEditor;
 
-// Theme Objects
-@property (strong) OEThemeImage          *groupBackgroundImage;
-@property (strong) OEThemeTextAttributes *groupTitleAttributes;
-@property (strong) OEThemeTextAttributes *groupSubtitleAttributes;
+@property (readonly) NSImage      *groupBackgroundImage;
+@property (readonly) NSDictionary *groupTitleAttributes;
+@property (readonly) NSDictionary *groupSubtitleAttributes;
 @end
 
 @implementation OEGridView
-static IKImageWrapper *lightingImage, *noiseImageHighRes, *noiseImage;
-+ (void)initialize
-{
-    if([self class] != [OEGridView class])
-        return;
-
-
-    NSImage *nslightingImage = [NSImage imageNamed:@"background_lighting"];
-    lightingImage = [IKImageWrapper imageWithNSImage:nslightingImage];
-
-    OEBackgroundNoisePatternCreate();
-    OEBackgroundHighResolutionNoisePatternCreate();
-
-    noiseImage = [IKImageWrapper imageWithCGImage:OEBackgroundNoiseImageRef];
-    noiseImageHighRes = [IKImageWrapper imageWithCGImage:OEBackgroundHighResolutionNoiseImageRef];
-}
 
 - (instancetype)init
 {
@@ -121,20 +102,17 @@ static IKImageWrapper *lightingImage, *noiseImageHighRes, *noiseImage;
 
 - (void)performSetup
 {
+    NSAppearance.currentAppearance = self.effectiveAppearance;
+    
     _editingIndex = NSNotFound;
     _ratingTracking = NSNotFound;
 
-    if([self groupThemeKey] == nil)
-    {
-        [self setGroupThemeKey:@"grid_group"];
-    }
-
-    [self registerForDraggedTypes:[NSArray arrayWithObjects:NSFilenamesPboardType, NSPasteboardTypePNG, NSPasteboardTypeTIFF, nil]];
+    [self registerForDraggedTypes:@[NSPasteboardTypeFileURL, NSPasteboardTypePNG, NSPasteboardTypeTIFF]];
     [self setAllowsReordering:NO];
     [self setAllowsDroppingOnItems:YES];
     [self setAnimates:NO];
 
-    [self private_setClipsToBounds:NO];
+    [self setClipsToBounds:NO];
     [self setCellsStyleMask:IKCellsStyleNone];
 
     IKImageBrowserLayoutManager *layoutManager = [self layoutManager];
@@ -146,23 +124,53 @@ static IKImageWrapper *lightingImage, *noiseImageHighRes, *noiseImage;
 
     _fieldEditor = [[OEGridViewFieldEditor alloc] initWithFrame:NSMakeRect(50, 50, 50, 50)];
     [self addSubview:_fieldEditor];
+    
+    [self setValue:NSColor.clearColor forKey:IKImageBrowserBackgroundColorKey];
 }
 
-- (void)setGroupThemeKey:(NSString*)key
+- (NSImage*) groupBackgroundImage
 {
-    OETheme *theme = [OETheme sharedTheme];
-
-    _groupThemeKey = key;
-
-    NSString *backgroundImageKey = [key stringByAppendingString:@"_background"];
-    [self setGroupBackgroundImage:[theme themeImageForKey:backgroundImageKey]];
-
-    NSString *titleAttributesKey = [key stringByAppendingString:@"_title"];
-    [self setGroupTitleAttributes:[theme themeTextAttributesForKey:titleAttributesKey]];
-
-    NSString *subtitleAttributesKey = [key stringByAppendingString:@"_subtitle"];
-    [self setGroupSubtitleAttributes:[theme themeTextAttributesForKey:subtitleAttributesKey]];
+    return [NSImage imageNamed:@"grid_header"];
 }
+
+- (NSDictionary*)groupTitleAttributes
+{
+    static NSDictionary *attributes;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSFont *font = [NSFont boldSystemFontOfSize:12];
+        NSColor *color = NSColor.labelColor;
+        
+        attributes = @{
+            NSFontAttributeName : font,
+            NSForegroundColorAttributeName : color
+        };
+    });
+    
+    return attributes;
+}
+
+- (NSDictionary*)groupSubtitleAttributes
+{
+    static NSDictionary *attributes;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSFont *font = [NSFont systemFontOfSize:12];
+        NSColor *color = NSColor.secondaryLabelColor;
+        
+        NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
+        paragraphStyle.alignment = NSTextAlignmentRight;
+        
+        attributes = @{
+            NSFontAttributeName : font,
+            NSForegroundColorAttributeName : color,
+            NSParagraphStyleAttributeName : paragraphStyle
+    };
+    });
+    
+    return attributes;
+}
+
 #pragma mark - Cells
 - (IKImageBrowserCell *)newCellForRepresentedItem:(id) cell
 {
@@ -247,6 +255,8 @@ static IKImageWrapper *lightingImage, *noiseImageHighRes, *noiseImage;
             }
         }
     }];
+
+    [self installToolTips];
 }
 
 #pragma mark - Mouse Interaction
@@ -446,7 +456,9 @@ static IKImageWrapper *lightingImage, *noiseImageHighRes, *noiseImage;
     switch (event.keyCode) {
         // original implementation does not pass space key to type-select
         case kVK_Space:
-            [self handleKeyInput:event character:' '];
+            if (![self.delegate respondsToSelector:@selector(toggleQuickLook)] ||
+                ![self.delegate toggleQuickLook])
+                [self handleKeyInput:event character:' '];
             break;
             
         case kVK_Return:
@@ -478,31 +490,10 @@ static IKImageWrapper *lightingImage, *noiseImageHighRes, *noiseImage;
         NSMenu *contextMenu = [(id <OEGridViewMenuSource>)[self dataSource] gridView:self menuForItemsAtIndexes:indexes];
         if(!contextMenu) return nil;
 
-        OEMenuStyle     style      = ([[NSUserDefaults standardUserDefaults] boolForKey:OEMenuOptionsStyleKey] ? OEMenuStyleLight : OEMenuStyleDark);
-        IKImageBrowserCell *itemCell   = [self cellForItemAtIndex:index];
-
-        NSRect          hitRect             = NSInsetRect([itemCell imageFrame], 5, 5);
-        //NSRect          hitRectOnView       = [itemCell convertRect:hitRect toLayer:self.layer];
-        int major, minor;
-        GetSystemVersion(&major, &minor, NULL);
-        if (major == 10 && minor < 8) hitRect.origin.y = self.bounds.size.height - hitRect.origin.y - hitRect.size.height;
-        NSRect          hitRectOnWindow     = [self convertRect:hitRect toView:nil];
-        NSRect          visibleRectOnWindow = [self convertRect:[self visibleRect] toView:nil];
-        NSRect          visibleItemRect     = NSIntersectionRect(hitRectOnWindow, visibleRectOnWindow);
-
-        // we enhance the calculated rect to get a visible gap between the item and the menu
-        NSRect enhancedVisibleItemRect = NSInsetRect(visibleItemRect, -3, -3);
-
-        const NSRect  targetRect = [[self window] convertRectToScreen:enhancedVisibleItemRect];
-        NSDictionary *options    = [NSDictionary dictionaryWithObjectsAndKeys:
-                                    [NSNumber numberWithUnsignedInteger:style], OEMenuOptionsStyleKey,
-                                    [NSNumber numberWithUnsignedInteger:OEMinXEdge], OEMenuOptionsArrowEdgeKey,
-                                    [NSValue valueWithRect:targetRect], OEMenuOptionsScreenRectKey,
-                                    nil];
-
         // Display the menu
         [[self window] makeFirstResponder:self];
-        [OEMenu openMenu:contextMenu withEvent:theEvent forView:self options:options];
+        [NSMenu popUpContextMenu:contextMenu withEvent:theEvent forView:self];
+        
         return nil;
     }
 
@@ -714,59 +705,37 @@ static IKImageWrapper *lightingImage, *noiseImageHighRes, *noiseImage;
 
 - (void)drawDragOverlays
 {
+    NSAppearance.currentAppearance = self.effectiveAppearance;
     id <IKRenderer> renderer = [self renderer];
 
     if([self dropOperation] != IKImageBrowserDropBefore) return;
 
     NSUInteger scaleFactor = [renderer scaleFactor];
-    [renderer setColorRed:0.03 Green:0.41 Blue:0.85 Alpha:1.0];
-
-    NSRect dragRect = [[self enclosingScrollView] documentVisibleRect];
-    dragRect = NSInsetRect(dragRect, 1.0*scaleFactor, 1.0*scaleFactor);
-    dragRect = NSIntegralRect(dragRect);
-
-    [renderer drawRoundedRect:dragRect radius:8.0*scaleFactor lineWidth:2.0*scaleFactor cacheIt:YES];
-}
-
-- (void)drawBackground:(struct CGRect)arg1
-{
-    const id <IKRenderer> renderer = [self renderer];
-    const CGFloat scaleFactor = [renderer scaleFactor];
-
-    arg1 = [[self enclosingScrollView] documentVisibleRect];
-
-    [renderer drawImage:lightingImage inRect:arg1 fromRect:NSZeroRect alpha:1.0];
-
-    IKImageWrapper *image = noiseImageHighRes;
-    if(scaleFactor != 1) image = noiseImageHighRes;
-
-    NSSize imageSize = {image.size.width/scaleFactor, image.size.height/scaleFactor};
-    for(CGFloat y=NSMinY(arg1); y < NSMaxY(arg1); y+=imageSize.height)
-        for(CGFloat x=NSMinX(arg1); x < NSMaxX(arg1); x+=imageSize.width)
-            [renderer drawImage:image inRect:(CGRect){{x,y},imageSize} fromRect:NSZeroRect alpha:1.0]
-            ;
-}
-
-- (void)drawGroupsOverlays
-{
-    [super drawGroupsOverlays];
-
-    const id <IKRenderer> renderer = [self renderer];
-    const NSColor *fullColor  = [[NSColor blackColor] colorWithAlphaComponent:0.4];
-    const NSColor *emptyColor = [NSColor clearColor];
-
-    const NSRect visibleRect = [[self enclosingScrollView] documentVisibleRect];
-    const NSRect gradientRectBottom = NSMakeRect(0.0, NSMinY(visibleRect), NSWidth(visibleRect), 8.0);
-    const NSRect gradientRectTop = NSMakeRect(0.0, NSMaxY(visibleRect) - 8.0, NSWidth(visibleRect), 8.0);
-
-    [renderer fillGradientInRect:gradientRectBottom bottomColor:fullColor topColor:emptyColor];
-    [renderer fillGradientInRect:gradientRectTop bottomColor:emptyColor   topColor:fullColor];
+    NSColor *dragColor = [[NSColor controlAccentColor] colorUsingColorSpace:self.window.colorSpace];
+    [renderer setColorRed:dragColor.redComponent Green:dragColor.greenComponent Blue:dragColor.blueComponent Alpha:dragColor.alphaComponent];
     
-    [renderer setColorRed:0.0 Green:0.0 Blue:0.0 Alpha:1.0];
-    [renderer fillRect:NSMakeRect(0, NSMinY(visibleRect)-10, NSWidth(visibleRect), 10)];
+    NSRect dragRect = NSIntegralRect([[self enclosingScrollView] documentVisibleRect]);
+    NSEdgeInsets insets = [[self enclosingScrollView] contentInsets];
+    dragRect.origin.x += insets.left;
+    dragRect.origin.y += insets.bottom;
+    dragRect.size.width -= insets.left + insets.right;
+    dragRect.size.height -= insets.bottom + insets.top;
+    dragRect = NSInsetRect(NSIntegralRect(dragRect), 2.0+1.0, 2.0+1.0);
+
+    [renderer drawRoundedRect:dragRect radius:8.0 lineWidth:2.0*scaleFactor cacheIt:YES];
 }
 
 #pragma mark - Groups
+
+- (CGRect)_rectOfGroupHeader:(IKImageBrowserGridGroup *)group
+{
+    CGRect rect = [super _rectOfGroupHeader:group];
+    NSImage *bgimg = self.groupBackgroundImage;
+    rect.origin.y = rect.origin.y + rect.size.height - (bgimg.size.height - 3.0);
+    rect.size.height = bgimg.size.height - 3.0;
+    return rect;
+}
+
 - (id)gridGroupFromDictionary:(NSDictionary*)arg1
 {
     IKImageBrowserGridGroup *group = [super gridGroupFromDictionary:arg1];
@@ -779,31 +748,44 @@ static IKImageWrapper *lightingImage, *noiseImageHighRes, *noiseImage;
 
 - (void)drawGroupsBackground
 {
-    const NSRect visibleRect = [self visibleRect];
+}
+
+- (void)drawGroupsOverlays
+{
+    NSAppearance.currentAppearance = self.effectiveAppearance;
+    [super drawGroupsOverlays];
+
+    const id <IKRenderer> renderer = [self renderer];
+    const NSRect visibleRect = [[self enclosingScrollView] documentVisibleRect];
+    
+    [renderer setColorRed:0.0 Green:0.0 Blue:0.0 Alpha:1.0];
+    [renderer fillRect:NSMakeRect(0, NSMinY(visibleRect)-10, NSWidth(visibleRect), 10)];
+    
+    //const NSRect visibleRect = [self visibleRect];
     [[[self layoutManager] groups] enumerateObjectsUsingBlock:^(IKImageBrowserGridGroup *group, NSUInteger idx, BOOL *stop) {
-        const NSRect groupHeaderRect = [self _rectOfGroupHeader:group];
+        const NSRect groupHeaderRect = [self rectOfFloatingGroupHeader:group];
         // draw group header if it's visible
         if(!NSEqualRects(NSIntersectionRect(visibleRect, groupHeaderRect), NSZeroRect))
         {
             [self drawGroup:group withRect:groupHeaderRect];
         }
     }];
-
 }
 
 - (void)drawGroup:(IKImageBrowserGridGroup*)group withRect:(NSRect)headerRect
 {
+    NSAppearance.currentAppearance = self.effectiveAppearance;
+    
     const CGFloat HeaderLeftBorder  = 14.0;
     const CGFloat HeaderRightBorder = 14.0;
 
     id <IKRenderer> renderer = [self renderer];
 
-    OEThemeState state = OEThemeStateDefault;
+    NSImage *bgimg = self.groupBackgroundImage;
+    CGImageRef img = [bgimg CGImageForProposedRect:NULL context:[NSGraphicsContext currentContext] hints:nil];
+    IKImageWrapper *backgroundImage = [IKImageWrapper imageWithCGImage:img];
 
-    NSImage *nsbackgroundImage = [[self groupBackgroundImage] imageForState:state];
-    IKImageWrapper *backgroundImage = [IKImageWrapper imageWithNSImage:nsbackgroundImage];
-
-    const NSSize backgroundImageSize = [backgroundImage size];
+    const NSSize backgroundImageSize = bgimg.size;
     headerRect.origin.y   += NSHeight(headerRect)-backgroundImageSize.height;
     headerRect.size.height = backgroundImageSize.height;
 
@@ -812,14 +794,15 @@ static IKImageWrapper *lightingImage, *noiseImageHighRes, *noiseImage;
     NSString *title = [group title];
     if(title != nil)
     {
-        NSDictionary *titleAttributes = [[self groupTitleAttributes] textAttributesForState:state] ?: @{};
+        NSDictionary *titleAttributes = self.groupTitleAttributes;
         NSRect titleRect = (NSRect){{NSMinX(headerRect)+HeaderLeftBorder, NSMinY(headerRect)},
             {NSWidth(headerRect)-HeaderLeftBorder, NSHeight(headerRect)}};
 
         // center text
         NSAttributedString *string = [[NSAttributedString alloc] initWithString:title attributes:titleAttributes];
-        CGFloat stringHeight = [string size].height;
-        titleRect = NSInsetRect(titleRect, 0, (NSHeight(titleRect)-stringHeight)/4.0);
+        CGFloat stringHeight = string.size.height;
+        titleRect = NSInsetRect(titleRect, 0, (headerRect.size.height-stringHeight)/2.0);
+        titleRect.origin.y += 1;
 
         [renderer drawText:title inRect:titleRect withAttributes:titleAttributes withAlpha:1.0];
     }
@@ -827,28 +810,47 @@ static IKImageWrapper *lightingImage, *noiseImageHighRes, *noiseImage;
     NSString *subtitle = [group objectForKey:OEImageBrowserGroupSubtitleKey];
     if(subtitle != nil)
     {
-        NSDictionary *subtitleAttributes = [[self groupSubtitleAttributes] textAttributesForState:state] ?: @{};
+        NSDictionary *subtitleAttributes = self.groupSubtitleAttributes;
         NSRect subtitleRect = (NSRect){{NSMinX(headerRect)+HeaderLeftBorder, NSMinY(headerRect)},
             {NSWidth(headerRect)-HeaderLeftBorder-HeaderRightBorder, NSHeight(headerRect)}};
 
         // center text
         NSAttributedString *string = [[NSAttributedString alloc] initWithString:subtitle attributes:subtitleAttributes];
-        CGFloat stringHeight = [string size].height;
-        subtitleRect = NSInsetRect(subtitleRect, 0, (NSHeight(subtitleRect)-stringHeight)/4.0);
+        CGFloat stringHeight = string.size.height;
+        subtitleRect = NSInsetRect(subtitleRect, 0, (headerRect.size.height-stringHeight)/2.0);
+        subtitleRect.origin.y += 1;
 
         [renderer drawText:subtitle inRect:subtitleRect withAttributes:subtitleAttributes withAlpha:1.0];
     }
 }
 
-#pragma mark -
+#pragma mark - Data Reloading
+
 - (void)reloadCellDataAtIndex:(unsigned long long)arg1
 {
     [super reloadCellDataAtIndex:arg1];
 }
 
-- (void)private_setClipsToBounds:(BOOL)flag
+- (void)reloadData
 {
-    if([self respondsToSelector:@selector(setClipsToBounds:)])
-        [self setClipsToBounds:flag];
+    // Store currently selected indexes.
+    NSIndexSet *selectionIndexes = self.selectionIndexes;
+    
+    [super reloadData];
+    
+    // Restore previously selected indexes within the current item count.
+    NSUInteger indexCount = [self.dataSource numberOfItemsInImageBrowser:self];
+    NSIndexSet *newSelectionIndexes = [selectionIndexes indexesPassingTest:^BOOL(NSUInteger idx, BOOL * _Nonnull stop) {
+        return idx < indexCount;
+    }];
+    [self setSelectionIndexes:newSelectionIndexes byExtendingSelection:NO];
 }
+
+#pragma mark - Handling appearance changes
+
+- (void)viewDidChangeEffectiveAppearance
+{
+    [self reloadData];
+}
+
 @end

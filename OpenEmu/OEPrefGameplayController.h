@@ -24,21 +24,16 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Cocoa/Cocoa.h>
+@import Cocoa;
 #import "OEPreferencePane.h"
 
 @interface OEPrefGameplayController : NSViewController <OEPreferencePane>
 
-- (NSImage *)icon;
-- (NSString *)title;
-
-- (NSSize)viewSize;
-
 #pragma mark -
 #pragma mark UI Actions
 
-- (IBAction)changeFilter:(id)sender;
+- (IBAction)changeGlobalDefaultShader:(id)sender;
 
-@property(weak, readonly) IBOutlet NSPopUpButton *filterSelection;
+@property(weak, readonly) IBOutlet NSPopUpButton *globalDefaultShaderSelection;
 
 @end

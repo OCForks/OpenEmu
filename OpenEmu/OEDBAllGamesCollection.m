@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2011, OpenEmu Team
+ Copyright (c) 2015, OpenEmu Team
  
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -25,7 +25,9 @@
  */
 
 #import "OEDBAllGamesCollection.h"
-#import "OETheme.h"
+
+NS_ASSUME_NONNULL_BEGIN
+
 @implementation OEDBAllGamesCollection
 
 + (instancetype)sharedDBAllGamesCollection
@@ -38,9 +40,9 @@
     return sharedInstance;
 }
 
-- (NSImage *)sidebarIcon
+- (nullable NSImage *)sidebarIcon
 {
-    return [[OETheme sharedTheme] imageForKey:@"collections_smart" forState:OEThemeStateDefault];
+    return [NSImage imageNamed:@"collection_smart"];
 }
 
 - (NSString *)sidebarName
@@ -53,12 +55,12 @@
     NSLog(@"OEDBAllGamesCollection: can not change name!");
 }
 
-- (NSString*)viewControllerClassName
+- (nullable NSString*)viewControllerClassName
 {
     return @"OEGameCollectionViewController";
 }
 
-- (NSString*)sidebarID
+- (nullable NSString*)sidebarID
 {
     return @"OEDBAllGamesCollection";
 }
@@ -84,3 +86,5 @@
 }
 
 @end
+
+NS_ASSUME_NONNULL_END

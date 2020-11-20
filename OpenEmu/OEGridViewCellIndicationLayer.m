@@ -25,9 +25,6 @@
  */
 
 #import "OEGridViewCellIndicationLayer.h"
-#import <Quartz/Quartz.h>
-
-#import "NSColor+OEAdditions.h"
 
 #define M_TAU (M_PI * 2.0)
 
@@ -89,7 +86,7 @@ static CGColorRef processingItemBackgroundColorRef = nil;
     {
         [sublayer setFrame:bounds];
     }
-    [CATransaction flush];
+    [CATransaction commit];
 }
 
 #pragma mark -

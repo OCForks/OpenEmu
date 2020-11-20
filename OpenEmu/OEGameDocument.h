@@ -24,13 +24,15 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Cocoa/Cocoa.h>
-#import "NSDocument+OEAdditions.h"
+@import Cocoa;
+#import "OEGameViewController.h"
+
+extern NSString * const OEScreenshotAspectRatioCorrectionDisabled;
 
 extern NSString *const OEGameCoreManagerModePreferenceKey;
 extern NSString *const OEGameDocumentErrorDomain;
 
-enum _OEGameDocumentErrorCodes
+typedef NS_ERROR_ENUM(OEGameDocumentErrorDomain, OEGameDocumentErrorCodes)
 {
     OENoError                      =  0,
     OEFileDoesNotExistError        = -1,
@@ -39,6 +41,7 @@ enum _OEGameDocumentErrorCodes
     OENoCoreForSaveStateError      = -8,
     OEImportRequiredError          = -9,
     OECouldNotLoadROMError         = -10,
+    OEGameCoreCrashedError         = -11
 };
 
 @class OECorePlugin;
@@ -47,8 +50,9 @@ enum _OEGameDocumentErrorCodes
 @class OEDBSaveState;
 @class OEGameViewController;
 @class OESystemPlugin;
+@class OEEvent;
 
-@interface OEGameDocument : NSDocument <OEGlobalEventsHandler>
+@interface OEGameDocument : NSDocument <OEGameViewControllerDelegate>
 
 - (id)initWithRom:(OEDBRom *)rom core:(OECorePlugin *)core error:(NSError **)outError;
 - (id)initWithGame:(OEDBGame *)game core:(OECorePlugin *)core error:(NSError **)outError;
@@ -69,22 +73,32 @@ enum _OEGameDocumentErrorCodes
 
 @property(nonatomic) NSWindowController *gameWindowController;
 
-@property(readonly) OESystemResponder *gameSystemResponder;
-
 @property(getter=isEmulationPaused) BOOL emulationPaused;
+
+@property(nonatomic) BOOL handleEvents;
+@property(nonatomic) BOOL handleKeyboardEvents;
 
 #pragma mark - Actions
 - (IBAction)editControls:(id)sender;
 
 #pragma mark - Volume
+@property (readonly) float volume;
 - (IBAction)changeAudioOutputDevice:(id)sender;
 - (IBAction)changeVolume:(id)sender;
 - (IBAction)mute:(id)sender;
 - (IBAction)unmute:(id)sender;
+- (void)volumeDown:(id)sender;
+- (void)volumeUp:(id)sender;
 
 #pragma mark - Controlling Emulation
 - (void)switchCore:(id)sender;
+- (void)toggleEmulationPaused:(id)sender;
+- (void)resetEmulation:(id)sender;
 - (IBAction)stopEmulation:(id)sender;
+- (IBAction)takeScreenshot:(id)sender;
+
+/*! Return a filtered screenshot of the currently running core */
+- (NSImage *)screenshot;
 
 #pragma mark - Cheats
 - (IBAction)addCheat:(id)sender;
@@ -93,15 +107,37 @@ enum _OEGameDocumentErrorCodes
 - (BOOL)supportsCheats;
 - (void)setCheat:(NSString *)cheatCode withType:(NSString *)type enabled:(BOOL)enabled;
 
+#pragma mark - Discs
+- (IBAction)setDisc:(id)sender;
+- (BOOL)supportsMultipleDiscs;
+
+#pragma mark - File Insertion
+- (IBAction)insertFile:(id)sender;
+- (BOOL)supportsFileInsertion;
+
+#pragma mark - Display Mode
+- (void)changeDisplayMode:(id)sender;
+- (BOOL)supportsDisplayModeChange;
+- (IBAction)nextDisplayMode:(id)sender;
+- (IBAction)lastDisplayMode:(id)sender;
+
 #pragma mark - Saving States
 - (BOOL)supportsSaveStates;
+- (void)quickSave:(id)sender;
+- (void)quickLoad:(id)sender;
 
 #pragma mark - Deleting States
 - (IBAction)deleteSaveState:(id)sender;
 
-#pragma mark - OEGameViewController Methods
+#pragma mark - Full Screen
+- (void)toggleFullScreen:(id)sender;
 
-- (void)gameViewController:(OEGameViewController *)sender setDrawSquarePixels:(BOOL)drawSquarePixels;
+#pragma mark - OEGameViewController Methods
+- (void)setOutputBounds:(NSRect)bounds;
 - (void)gameViewController:(OEGameViewController *)sender didReceiveMouseEvent:(OEEvent *)event;
+- (void)gameViewController:(OEGameViewController *)sender updateBounds:(CGRect)newBounds;
+- (void)gameViewController:(OEGameViewController *)sender setShaderURL:(NSURL *)url completionHandler:(void (^)(BOOL success, NSError *error))block;
+- (void)gameViewController:(OEGameViewController *)sender shaderParamGroupsWithCompletionHandler:(void (^)(NSArray<OEShaderParamGroupValue *> *))handler;
+- (void)gameViewController:(OEGameViewController *)sender setShaderParameterValue:(CGFloat)value atIndex:(NSUInteger)index atGroupIndex:(NSUInteger)group;
 
 @end

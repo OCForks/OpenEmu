@@ -25,7 +25,7 @@
  */
 
 #import "OEPluginDocument.h"
-#import "OEPlugin.h"
+@import OpenEmuKit;
 
 @implementation OEPluginDocument
 
@@ -62,17 +62,28 @@
 
         if(worked)
         {
-            worked = [OEPlugin pluginWithFileAtPath:newPath type:type forceReload:YES] != nil;
+            NSError *error;
+            worked = [OEPlugin pluginWithFileAtPath:newPath type:type forceReload:YES error:&error] != nil;
 
-            if(!worked && outError)
-                *outError = [NSError errorWithDomain:NSCocoaErrorDomain code:NSExecutableLoadError userInfo:
-                             [NSDictionary dictionaryWithObjectsAndKeys:
-                              [NSString stringWithFormat:NSLocalizedString(@"Couldn't load %@ plugin", @""), path], NSLocalizedDescriptionKey,
-                              NSLocalizedString(@"A version of this plugin is already loaded", @""),                NSLocalizedFailureReasonErrorKey,
-                              NSLocalizedString(@"You need to restart the application to commit the change", @""), NSLocalizedRecoverySuggestionErrorKey,
-                              [NSArray arrayWithObjects:NSLocalizedString(@"Restart now",@""),
-                                                        NSLocalizedString(@"Cancel",@""), nil],    NSLocalizedRecoveryOptionsErrorKey,
-                              nil]];
+            if(!worked && outError) {
+                NSMutableDictionary *errorUserInfo = [@{
+                    NSLocalizedDescriptionKey: [NSString stringWithFormat:NSLocalizedString(@"Couldn't load %@ plugin", @""), path]
+                } mutableCopy];
+                
+                if (error && [error.domain isEqual:OEGameCoreErrorDomain]) {
+                    if (error.code == OEGameCorePluginAlreadyLoadedError) {
+                        errorUserInfo[NSLocalizedFailureReasonErrorKey] =
+                            NSLocalizedString(@"A version of this plugin is already loaded", @"");
+                        errorUserInfo[NSLocalizedRecoverySuggestionErrorKey] =
+                            NSLocalizedString(@"You need to restart the application to commit the change", @"");
+                    } else if (error.code == OEGameCorePluginOutOfSupportError) {
+                        errorUserInfo[NSLocalizedFailureReasonErrorKey] =
+                            NSLocalizedString(@"This plugin is currently unsupported", @"");
+                    }
+                }
+                
+                *outError = [NSError errorWithDomain:NSCocoaErrorDomain code:NSExecutableLoadError userInfo:errorUserInfo];
+            }
         }
     }
     return worked;

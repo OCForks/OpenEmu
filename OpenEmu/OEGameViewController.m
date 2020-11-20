@@ -26,50 +26,26 @@
 
 #import "OEGameViewController.h"
 
-#import "OEDBRom.h"
-#import "OEDBSystem.h"
-#import "OEDBGame.h"
-#import "OEDBScreenshot.h"
+@import OpenEmuKit;
+@import OpenEmuSystem;
 
-#import "OEGameView.h"
-#import "OECorePickerController.h"
-#import "OEDOGameCoreHelper.h"
-#import "OEDOGameCoreManager.h"
-#import "OEGameCoreManager.h"
-#import "OEThreadGameCoreManager.h"
-#import "OEXPCGameCoreManager.h"
-
-#import "OESystemPlugin.h"
-#import "OECorePlugin.h"
-
-#import "OEDBSaveState.h"
 #import "OEGameControlsBar.h"
 
-#import "OECoreUpdater.h"
-
 #import "OEGameDocument.h"
-#import "OEAudioDeviceManager.h"
 
-#import "OEHUDAlert+DefaultAlertsAdditions.h"
-#import "NSURL+OELibraryAdditions.h"
-#import "NSColor+OEAdditions.h"
-#import "NSViewController+OEAdditions.h"
+#import "OpenEmu-Swift.h"
 
-#import "OEPreferencesController.h"
-#import "OELibraryDatabase.h"
-
-#import <OpenEmuSystem/OpenEmuSystem.h>
-
+NSNotificationName const OEGameViewControllerEmulationWillFinishNotification = @"OEGameViewControllerEmulationWillFinishNotification";
+NSNotificationName const OEGameViewControllerEmulationDidFinishNotification = @"OEGameViewControllerEmulationDidFinishNotification";
 NSString *const OEGameVolumeKey = @"volume";
-NSString *const OEGameDefaultVideoFilterKey = @"videoFilter";
-NSString *const OEGameSystemVideoFilterKeyFormat = @"videoFilter.%@";
+NSString *const OEGameDefaultVideoShaderKey = @"videoShader";
+NSString *const OEGameSystemVideoShaderKeyFormat = @"videoShader.%@";
+NSString *const OEGameCoreDisplayModeKeyFormat = @"displayMode.%@";
 NSString *const OEGameCoresInBackgroundKey = @"gameCoreInBackgroundThread";
-NSString *const OEDontShowGameTitleInWindowKey = @"dontShowGameTitleInWindow";
-NSString *const OEAutoSwitchCoreAlertSuppressionKey = @"changeCoreWhenLoadingStateWitoutConfirmation";
 NSString *const OEBackgroundPauseKey = @"backgroundPause";
-NSString *const OEForceCorePicker = @"forceCorePicker";
-NSString *const OEGameViewControllerEmulationWillFinishNotification = @"OEGameViewControllerEmulationWillFinishNotification";
-NSString *const OEGameViewControllerEmulationDidFinishNotification = @"OEGameViewControllerEmulationDidFinishNotification";
+NSString *const OEBackgroundControllerPlayKey = @"backgroundControllerPlay";
+NSString *const OEPopoutGameWindowAlwaysOnTopKey        = @"OEPopoutGameWindowAlwaysOnTop";
+NSString *const OEPopoutGameWindowIntegerScalingOnlyKey = @"OEPopoutGameWindowIntegerScalingOnly";
 NSString *const OETakeNativeScreenshots = @"takeNativeScreenshots";
 NSString *const OEGameViewControllerROMKey = @"OEROM";
 NSString *const OEGameViewBackgroundColorKey = @"gameViewBackgroundColor";
@@ -80,13 +56,30 @@ NSString *const OEScreenshotPropertiesKey = @"screenshotProperties";
 #define UDDefaultCoreMappingKeyPrefix   @"defaultCore"
 #define UDSystemCoreMappingKeyForSystemIdentifier(_SYSTEM_IDENTIFIER_) [NSString stringWithFormat:@"%@.%@", UDDefaultCoreMappingKeyPrefix, _SYSTEM_IDENTIFIER_]
 
+// arbitrary default screen size with 4:3 ratio
+CGFloat const DEFAULT_WIDTH = 400.0;
+CGFloat const DEFAULT_HEIGHT = 300.0;
+
+/*
+ TODO Messages to remote layer:
+ - Change bounds
+ - Start Syphon
+ - Native screenshot
+ 
+ Messages from remote layer:
+ - Default screen size/aspect size - DONE?
+ */
+
 @interface OEGameViewController () <OEGameViewDelegate>
 {
     // Standard game document stuff
-    OEGameView *_gameView;
-    OEIntSize   _screenSize;
-    OEIntSize   _aspectSize;
+    OEScaledGameLayerView   *_scaledView;
+    OEGameLayerView         *_gameView;
+    NSArray<NSLayoutConstraint *> *_gameViewContraints;
+    
+    OEGameLayerNotificationView   *_notificationView;
     BOOL        _pausedByGoingToBackground;
+    OEShaderParametersWindowController *_controller;
 }
 
 @end
@@ -97,7 +90,7 @@ NSString *const OEScreenshotPropertiesKey = @"screenshotProperties";
     if([self class] == [OEGameViewController class])
     {
         [[NSUserDefaults standardUserDefaults] registerDefaults:@{
-                                                                  OEScreenshotFileFormatKey : @(NSPNGFileType),
+                                                                  OEScreenshotFileFormatKey : @(NSBitmapImageFileTypePNG),
                                                                   OEScreenshotPropertiesKey : @{},
                                                                   }];
     }
@@ -108,41 +101,48 @@ NSString *const OEScreenshotPropertiesKey = @"screenshotProperties";
     if((self = [super init]))
     {
         _controlsWindow = [[OEGameControlsBar alloc] initWithGameViewController:self];
-        [_controlsWindow setReleasedWhenClosed:YES];
-
-        NSView *view = [[NSView alloc] initWithFrame:(NSRect){ .size = { 1.0, 1.0 }}];
-        [self setView:view];
-
-        _gameView = [[OEGameView alloc] initWithFrame:[[self view] bounds]];
-        [_gameView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-        [_gameView setDelegate:self];
-
-        NSString *backgroundColorName = [[NSUserDefaults standardUserDefaults] objectForKey:OEGameViewBackgroundColorKey];
-        if(backgroundColorName != nil)
-        {
-            NSColor *color = OENSColorFromString(backgroundColorName);
-            [_gameView setBackgroundColor:color];
-        }
+        [_controlsWindow setReleasedWhenClosed:NO];
         
-        [[self view] addSubview:_gameView];
+        _controller = [[OEShaderParametersWindowController alloc] initWithGameViewController:self];
+        
+        _defaultScreenSize = NSMakeSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+        
+        _scaledView = [[OEScaledGameLayerView alloc] initWithFrame:(NSRect){ .size = { 1.0, 1.0 }}];
+        [self setView:_scaledView];
+        
+        _gameView = [[OEGameLayerView alloc] initWithFrame:[[self view] bounds]];
+        [_gameView setDelegate:self];
+        _scaledView.contentView = _gameView;
+        [_scaledView setContentViewSizeFillWithAnimated:NO];
+        
+        _notificationView = [[OEGameLayerNotificationView alloc] initWithFrame:NSMakeRect(0, 0, 28, 28)];
+        _notificationView.translatesAutoresizingMaskIntoConstraints = NO;
+        _notificationView.cell.accessibilityElement = NO;
+        [self.view addSubview:_notificationView];
+        
+        [NSLayoutConstraint activateConstraints:@[
+            [_notificationView.widthAnchor constraintEqualToConstant:28],
+            [_notificationView.heightAnchor constraintEqualToConstant:28],
+            [_notificationView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:60],
+            [_notificationView.topAnchor constraintEqualToAnchor:self.view.topAnchor constant:10],
+        ]];
 
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(viewDidChangeFrame:) name:NSViewFrameDidChangeNotification object:_gameView];
-
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(windowDidChangeScreen:) name:NSWindowDidMoveNotification object:self];
     }
     return self;
 }
 
 - (void)dealloc
 {
-    [[NSNotificationCenter defaultCenter] removeObserver:self];
-
     [_gameView setDelegate:nil];
     _gameView = nil;
-
+    
     [_controlsWindow setGameWindow:nil];
     [_controlsWindow close];
     _controlsWindow = nil;
+    
+    [_controller.window close];
+    _controller = nil;
 }
 
 #pragma mark -
@@ -150,13 +150,13 @@ NSString *const OEScreenshotPropertiesKey = @"screenshotProperties";
 - (void)viewDidAppear
 {
     [super viewDidAppear];
-
+    
     NSWindow *window = [self OE_rootWindow];
     if(window == nil) return;
-
+    
     [_controlsWindow setGameWindow:window];
     [_controlsWindow repositionOnGameWindow];
-
+    
     [window makeFirstResponder:_gameView];
 }
 
@@ -164,13 +164,28 @@ NSString *const OEScreenshotPropertiesKey = @"screenshotProperties";
 {
     [super viewWillDisappear];
 
-    [_controlsWindow hide];
+    [_controlsWindow hideAnimated:NO];
     [_controlsWindow setGameWindow:nil];
     [[self OE_rootWindow] removeChildWindow:_controlsWindow];
 }
+#pragma mark - Game View control
+
+- (void)gameViewSetIntegralSize:(NSSize)size animated:(BOOL)animated
+{
+    [_scaledView setContentViewSize:size animated:animated];
+}
+
+- (void)gameViewFillSuperView
+{
+    [_scaledView setContentViewSizeFillWithAnimated:NO];
+}
+
+- (void)viewDidLayout
+{
+    [[self document] setOutputBounds:_gameView.bounds];
+}
 
 #pragma mark - Controlling Emulation
-
 - (BOOL)supportsCheats;
 {
     return [[self document] supportsCheats];
@@ -179,6 +194,21 @@ NSString *const OEScreenshotPropertiesKey = @"screenshotProperties";
 - (BOOL)supportsSaveStates
 {
     return [[self document] supportsSaveStates];
+}
+
+- (BOOL)supportsMultipleDiscs
+{
+    return [[self document] supportsMultipleDiscs];
+}
+
+- (BOOL)supportsFileInsertion
+{
+    return [[self document] supportsFileInsertion];
+}
+
+- (BOOL)supportsDisplayModeChange
+{
+    return [[self document] supportsDisplayModeChange];
 }
 
 - (NSString *)coreIdentifier;
@@ -191,9 +221,14 @@ NSString *const OEScreenshotPropertiesKey = @"screenshotProperties";
     return [[self document] systemIdentifier];
 }
 
-- (NSImage *)takeNativeScreenshot
+- (NSImage *)screenshot
 {
-    return [_gameView nativeScreenshot];
+    return [self.document screenshot];
+}
+
+- (IBAction)takeScreenshot:(id)sender
+{
+    [[self document] takeScreenshot:sender];
 }
 
 - (void)reflectVolume:(float)volume;
@@ -209,24 +244,57 @@ NSString *const OEScreenshotPropertiesKey = @"screenshotProperties";
 - (void)toggleControlsVisibility:(NSMenuItem*)sender
 {
     [sender setState:![sender state]];
-    [[self controlsWindow] setCanShow:[sender state]==NSOffState];
+    [[self controlsWindow] setCanShow:[sender state]==NSControlStateValueOff];
 }
 
 #pragma mark - HUD Bar Actions
-- (void)selectFilter:(id)sender
+- (void)selectShader:(id)sender
 {
-    NSString *filterName;
-    if([sender isKindOfClass:[NSString class]])
-        filterName = sender;
-    else if([sender respondsToSelector:@selector(representedObject)] && [[sender representedObject] isKindOfClass:[NSString class]])
-        filterName = [sender representedObject];
-    else if([sender respondsToSelector:@selector(title)] && [[sender title] isKindOfClass:[NSString class]])
-        filterName = [sender title];
+    NSString *shaderName;
+    if([sender respondsToSelector:@selector(title)] && [[sender title] isKindOfClass:[NSString class]])
+        shaderName = [sender title];
     else
         DLog(@"Invalid argument passed: %@", sender);
 
-    [_gameView setFilterName:filterName];
-    [[NSUserDefaults standardUserDefaults] setObject:filterName forKey:[NSString stringWithFormat:OEGameSystemVideoFilterKeyFormat, [[self document] systemIdentifier]]];
+    OEShaderModel *shader = [OEShadersModel.shared shaderWithName:shaderName];
+    if (shader) {
+        [[self document] gameViewController:self setShaderURL:shader.url completionHandler:^(BOOL success, NSError *error) {
+            if (success)
+            {
+                [self didLoadShader:shader];
+            }
+            else if (error != nil)
+            {
+                NSAlert *alert = [NSAlert alertWithError:error];
+                [alert runModal];
+            }
+        }];
+    }
+
+    [NSUserDefaults.standardUserDefaults setObject:shaderName forKey:[NSString stringWithFormat:OEGameSystemVideoShaderKeyFormat, self.document.systemIdentifier]];
+}
+
+- (void)didLoadShader:(OEShaderModel *)shader
+{
+    _controller.shader = shader;
+    if (_controller.window.isVisible)
+    {
+        [self configureShader:nil];
+    }
+}
+
+- (void)configureShader:(id)sender
+{
+    if (_controller.shader == nil)
+    {
+        _controller.shader = [OEShadersModel.shared shaderForSystem:self.document.systemIdentifier];
+    }
+    
+    [self.document gameViewController:self shaderParamGroupsWithCompletionHandler:^(NSArray<OEShaderParamGroupValue *> *groups) {
+        self->_controller.groups = groups;
+        [self->_controller showWindow:self->_controller];
+    }];
+
 }
 
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem
@@ -235,88 +303,42 @@ NSString *const OEScreenshotPropertiesKey = @"screenshotProperties";
     if(action == @selector(toggleControlsVisibility:))
     {
         if([[self controlsWindow] canShow])
-            [menuItem setState:NSOffState];
+            [menuItem setState:NSControlStateValueOff];
         else
-            [menuItem setState:NSOnState];
+            [menuItem setState:NSControlStateValueOn];
     }
+    
+    
     return YES;
 }
 
-#pragma mark - Taking Screenshots
-- (void)takeScreenshot:(id)sender
+#pragma mark - OEGameCoreOwner methods
+
+- (void)setRemoteContextID:(NSUInteger)remoteContextID
 {
-    NSImage *screenshotImage;
-    bool takeNativeScreenshots = [[NSUserDefaults standardUserDefaults] boolForKey:OETakeNativeScreenshots];
-    screenshotImage = takeNativeScreenshots ? [_gameView nativeScreenshot] : [_gameView screenshot];
-    NSData *TIFFData = [screenshotImage TIFFRepresentation];
+    _gameView.remoteContextID = (CAContextID)remoteContextID;
+}
 
-    NSUserDefaults *standardUserDefaults = [NSUserDefaults standardUserDefaults];
-    NSBitmapImageFileType type = [standardUserDefaults integerForKey:OEScreenshotFileFormatKey];
-    NSDictionary *properties = [standardUserDefaults dictionaryForKey:OEScreenshotPropertiesKey];
-    NSBitmapImageRep *bitmapImageRep = [NSBitmapImageRep imageRepWithData:TIFFData];
-    NSData *imageData = [bitmapImageRep representationUsingType:type properties:properties];
-
-    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
-    [dateFormatter setDateFormat:@"yyyy-MM-dd HH.mm.ss"];
-    NSString *timeStamp = [dateFormatter stringFromDate:[NSDate date]];
-
-    NSString *fileName = [NSString stringWithFormat:@"%@ %@.png", [[[[self document] rom] game] displayName], timeStamp];
-    NSString *temporaryPath = [NSTemporaryDirectory() stringByAppendingPathComponent:fileName];
-    NSURL *temporaryURL = [NSURL fileURLWithPath:temporaryPath];
-
-    __autoreleasing NSError *error;
-    if(![imageData writeToURL:temporaryURL options:NSDataWritingAtomic error:&error])
+- (void)setScreenSize:(OEIntSize)newScreenSize aspectSize:(OEIntSize)newAspectSize
+{
+    _screenSize = newScreenSize;
+    _aspectSize = newAspectSize;
+    // Should never happen
+    if (OEIntSizeIsEmpty(newScreenSize) && OEIntSizeIsEmpty(newAspectSize))
     {
-        NSLog(@"Could not save screenshot at URL: %@, with error: %@", temporaryURL, error);
-    } else {
-        OEDBRom *rom = [[self document] rom];
-        OEDBScreenshot *screenshot = [OEDBScreenshot createObjectInContext:[rom managedObjectContext] forROM:rom withFile:temporaryURL];
-        [screenshot save];
+        _defaultScreenSize = NSMakeSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     }
-}
-
-#pragma mark - OEGameCoreDisplayHelper methods
-
-- (void)setEnableVSync:(BOOL)enable;
-{
-    [_gameView setEnableVSync:enable];
-}
-
-- (void)setScreenSize:(OEIntSize)newScreenSize aspectSize:(OEIntSize)newAspectSize withIOSurfaceID:(IOSurfaceID)newSurfaceID
-{
-    _screenSize = newScreenSize;
-    _aspectSize = newAspectSize;
-    [_gameView setScreenSize:_screenSize aspectSize:_aspectSize withIOSurfaceID:newSurfaceID];
-}
-
-- (void)setScreenSize:(OEIntSize)newScreenSize withIOSurfaceID:(IOSurfaceID)newSurfaceID;
-{
-    _screenSize = newScreenSize;
-    [_gameView setScreenSize:newScreenSize withIOSurfaceID:newSurfaceID];
-}
-
-- (void)setAspectSize:(OEIntSize)newAspectSize;
-{
-    _aspectSize = newAspectSize;
-    [_gameView setAspectSize:newAspectSize];
-}
-
-#pragma mark - Info
-
-- (NSSize)defaultScreenSize
-{
-    if(OEIntSizeIsEmpty(_screenSize) || OEIntSizeIsEmpty(_aspectSize))
-        return NSMakeSize(400, 300);
-
-    CGFloat wr = (CGFloat) _aspectSize.width / _screenSize.width;
-    CGFloat hr = (CGFloat) _aspectSize.height / _screenSize.height;
-    CGFloat ratio = MAX(hr, wr);
-    NSSize scaled = NSMakeSize((wr / ratio), (hr / ratio));
+    else
+    {
+        // Some cores may initially report a 0x0 screenRect on launch, so use aspectSize instead.
+        if (OEIntSizeIsEmpty(newScreenSize)) {
+            _screenSize = _aspectSize;
+        }
+        OEIntSize correct  = OECorrectScreenSizeForAspectSize(_screenSize, _aspectSize);
+        _defaultScreenSize = NSMakeSize(correct.width, correct.height);
+    }
     
-    CGFloat halfw = scaled.width;
-    CGFloat halfh = scaled.height;
-    
-    return NSMakeSize(_screenSize.width / halfh, _screenSize.height / halfw);
+    [_gameView setScreenSize:_screenSize aspectSize:_aspectSize];
 }
 
 #pragma mark - Private Methods
@@ -337,14 +359,53 @@ NSString *const OEScreenshotPropertiesKey = @"screenshotProperties";
 
 #pragma mark - OEGameViewDelegate Protocol
 
-- (void)gameView:(OEGameView *)gameView didReceiveMouseEvent:(OEEvent *)event
+- (void)gameView:(OEGameLayerView *)gameView didReceiveMouseEvent:(OEEvent *)event
 {
     [[self document] gameViewController:self didReceiveMouseEvent:event];
 }
 
-- (void)gameView:(OEGameView *)gameView setDrawSquarePixels:(BOOL)drawSquarePixels
+- (void)gameView:(OEGameLayerView *)gameView updateBounds:(CGRect)newBounds
 {
-    [[self document] gameViewController:self setDrawSquarePixels:drawSquarePixels];
+    [[self document] gameViewController:self updateBounds:newBounds];
+}
+
+- (void)gameView:(OEGameLayerView *)gameView updateBackingScaleFactor:(CGFloat)newScaleFactor
+{
+    [[self document] gameViewController:self updateBackingScaleFactor:newScaleFactor];
+}
+
+@end
+
+@implementation OEGameViewController (Notifications)
+
+- (void)showQuickSaveNotification
+{
+    [_notificationView showQuickSave];
+}
+
+- (void)showScreenShotNotification
+{
+    [_notificationView showScreenShot];
+}
+
+- (void)showFastForwardNotification:(BOOL)enable
+{
+    [_notificationView showFastForwardWithEnabled:enable];
+}
+
+- (void)showRewindNotification:(BOOL)enable
+{
+    [_notificationView showRewindWithEnabled:enable];
+}
+
+- (void)showStepForwardNotification
+{
+    [_notificationView showStepForward];
+}
+
+- (void)showStepBackwardNotification
+{
+    [_notificationView showStepBackward];
 }
 
 @end

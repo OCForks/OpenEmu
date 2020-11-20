@@ -112,9 +112,7 @@ typedef struct
 
 - (void)dealloc
 {
-    if(_timersQueue) [self OE_releaseTimersQueue];;
-    if(_actionsQueue) dispatch_release(_actionsQueue);
-    if(_processingQueue) dispatch_release(_processingQueue);
+    if(_timersQueue) [self OE_releaseTimersQueue];
 }
 
 #pragma mark - Main methods
@@ -185,20 +183,20 @@ typedef struct
     _currentState = _initialState;
 
     dispatch_async(_processingQueue, ^{
-        [self OE_enterState:_initialState];
+        [self OE_enterState:self->_initialState];
     });
 }
 
 - (void)processEvent:(OEFSMEventLabel)event
 {
     dispatch_async(_processingQueue, ^{
-        OEFSMTransition *transition = [[_transitions objectForKey:@(_currentState)] objectForKey:@(event)];
+        OEFSMTransition *transition = [[self->_transitions objectForKey:@(self->_currentState)] objectForKey:@(event)];
         if(transition)
         {
             [self OE_prepareToLeaveCurrentState];
 
             // Start the transition to the next state
-            if([transition action]) dispatch_async(_actionsQueue, ^{
+            if([transition action]) dispatch_async(self->_actionsQueue, ^{
                 [transition action]();
             });
 
@@ -210,15 +208,15 @@ typedef struct
 // Must be sent in the timers queue
 - (void)OE_processTimerTransition:(OEFSMTimerTransition *)timerTransition
 {
-    OETimersQueueContext *timersQueueContext = dispatch_get_context(dispatch_get_current_queue());
+    OETimersQueueContext *timersQueueContext = dispatch_get_context(_timersQueue);
     if(timersQueueContext->cancelled) return;
 
     dispatch_async(_processingQueue, ^{
-        if(_currentState == [timerTransition fromState])
+        if(self->_currentState == [timerTransition fromState])
         {
             [self OE_prepareToLeaveCurrentState];
 
-            if([timerTransition action]) dispatch_async(_actionsQueue, ^{
+            if([timerTransition action]) dispatch_async(self->_actionsQueue, ^{
                 [timerTransition action]();
             });
 
@@ -230,7 +228,7 @@ typedef struct
 // Must be sent in the processing queue
 - (void)OE_prepareToLeaveCurrentState
 {
-    NSAssert(dispatch_get_current_queue() == _processingQueue, @"This method must be executed in the processing queue only");
+    //NSAssert(dispatch_get_current_queue() == _processingQueue, @"This method must be executed in the processing queue only");
 
     OEFSMState *currentStateObject = [_states objectForKey:@(_currentState)];
 
@@ -244,7 +242,7 @@ typedef struct
 // Must be sent in the processing queue
 - (void)OE_enterState:(OEFSMStateLabel)nextState
 {
-    NSAssert(dispatch_get_current_queue() == _processingQueue, @"This method must be executed in the processing queue only");
+    //NSAssert(dispatch_get_current_queue() == _processingQueue, @"This method must be executed in the processing queue only");
 
     OEFSMState *nextStateObject = [_states objectForKey:@(nextState)];
     if([nextStateObject entry]) dispatch_async(_actionsQueue, ^{
@@ -290,7 +288,6 @@ typedef struct
     OETimersQueueContext *context = dispatch_get_context(_timersQueue);
     context->cancelled = YES;
 
-    dispatch_release(_timersQueue);
     _timersQueue = NULL;
 }
 
@@ -305,8 +302,6 @@ typedef struct
 {
     if(actionsQueue != _actionsQueue)
     {
-        if(actionsQueue) dispatch_retain(actionsQueue);
-        if(_actionsQueue) dispatch_release(_actionsQueue);
         _actionsQueue = actionsQueue;
     }
 }

@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2011, OpenEmu Team
+ Copyright (c) 2020, OpenEmu Team
  
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -31,129 +31,103 @@
 #import "OELibraryDatabase.h"
 
 #import "NSFileManager+OEHashingAdditions.h"
-#import "NSURL+OELibraryAdditions.h"
 
 #import <OpenEmuSystem/OECUESheet.h>
 #import <OpenEmuSystem/OECloneCD.h>
+#import <OpenEmuSystem/OEDreamcastGDI.h>
 
-@interface OEDBRom ()
-- (void)OE_calculateHashes;
-@end
+#import "OpenEmu-Swift.h"
+
+NS_ASSUME_NONNULL_BEGIN
 
 @implementation OEDBRom
+
 @dynamic URL;
-// Data Model Properties
-@dynamic location, favorite, crc32, md5, lastPlayed, fileSize, playCount, playTime, archiveFileIndex, header, serial, fileName, source;
+
 // Data Model Relationships
-@dynamic game, saveStates, tosec;
+@dynamic tosec;
 
 #pragma mark -
-+ (id)romWithURL:(NSURL *)url inContext:(NSManagedObjectContext *)context error:(NSError *__autoreleasing*)outError
+
++ (nullable instancetype)romWithURL:(nullable NSURL *)url inContext:(NSManagedObjectContext *)context error:(NSError **)outError
 {
     if(url == nil) return nil;
 
-    OELibraryDatabase *library = [[context userInfo] valueForKey:OELibraryDatabaseUserInfoKey];
-    NSURL *romFolderURL = [library romsFolderURL];
+    OELibraryDatabase *library = context.userInfo[OELibraryDatabaseUserInfoKey];
+    NSURL *romFolderURL = library.romsFolderURL;
 
-    url = [url urlRelativeToURL:romFolderURL];
+    url = [url URLRelativeToURL:romFolderURL];
 
-    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"location == %@", [url relativeString]];
+    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"location == %@", url.relativeString];
     NSFetchRequest *fetchRequest = [NSFetchRequest fetchRequestWithEntityName:[self entityName]];
     
-    [fetchRequest setFetchLimit:1];
-    [fetchRequest setIncludesPendingChanges:YES];
-    [fetchRequest setPredicate:predicate];
+    fetchRequest.fetchLimit = 1;
+    fetchRequest.includesPendingChanges = YES;
+    fetchRequest.predicate = predicate;
     
-    return [[context executeFetchRequest:fetchRequest error:outError] lastObject];
+    return [context executeFetchRequest:fetchRequest error:outError].lastObject;
 }
 
 #pragma mark -
-+ (id)romWithCRC32HashString:(NSString *)crcHash inContext:(NSManagedObjectContext *)context error:(NSError *__autoreleasing*)outError
-{
-    if(crcHash == nil) return nil;
-    
-    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"crc32 == %@", crcHash];
-    NSFetchRequest *fetchRequest = [NSFetchRequest fetchRequestWithEntityName:[self entityName]];
-    
-    [fetchRequest setFetchLimit:1];
-    [fetchRequest setIncludesPendingChanges:YES];
-    [fetchRequest setPredicate:predicate];
-    
-    return [[context executeFetchRequest:fetchRequest error:outError] lastObject];
-}
 
-+ (id)romWithMD5HashString:(NSString *)md5Hash inContext:(NSManagedObjectContext *)context error:(NSError *__autoreleasing*)outError
++ (nullable instancetype)romWithMD5HashString:(nullable NSString *)md5Hash inContext:(NSManagedObjectContext *)context error:(NSError **)outError
 {
     if(md5Hash == nil) return nil;
     
-    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"md5 == %@", [md5Hash lowercaseString]];
+    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"md5 == %@", md5Hash.lowercaseString];
     NSFetchRequest *fetchRequest = [NSFetchRequest fetchRequestWithEntityName:[self entityName]];
-    [fetchRequest setFetchLimit:1];
-    [fetchRequest setIncludesPendingChanges:YES];
-    [fetchRequest setPredicate:predicate];
     
-    return [[context executeFetchRequest:fetchRequest error:outError] lastObject];
+    fetchRequest.fetchLimit = 1;
+    fetchRequest.includesPendingChanges = YES;
+    fetchRequest.predicate = predicate;
+    
+    return [context executeFetchRequest:fetchRequest error:outError].lastObject;
 }
 
 #pragma mark - Accessors
-- (NSURL *)URL
+
+- (nullable NSURL *)URL
 {
-    NSURL *romFolderURL = [[self libraryDatabase] romsFolderURL];
-    return [NSURL URLWithString:[self location] relativeToURL:romFolderURL];
+    NSURL *romFolderURL = self.libraryDatabase.romsFolderURL;
+    return [NSURL URLWithString:self.location relativeToURL:romFolderURL];
 }
 
-- (void)setURL:(NSURL *)url
+- (void)setURL:(nullable NSURL *)url
 {
-    NSURL *romFolderURL = [[self libraryDatabase] romsFolderURL];
-    [self setLocation:[[url urlRelativeToURL:romFolderURL] relativeString]];
+    NSURL *romFolderURL = self.libraryDatabase.romsFolderURL;
+    self.location = [url URLRelativeToURL:romFolderURL]. relativeString;
 }
 
-- (NSURL *)sourceURL
+- (nullable NSURL *)sourceURL
 {
-    return [NSURL URLWithString:[self source]];
+    return [NSURL URLWithString:self.source];
 }
 
-- (void)setSourceURL:(NSURL *)sourceURL
+- (void)setSourceURL:(nullable NSURL *)sourceURL
 {
-    [self setSource:[sourceURL absoluteString]];
+    self.source = sourceURL.absoluteString;
 }
 
-- (NSString *)md5Hash
+- (nullable NSString *)md5Hash
 {
-    NSString *hash = [self md5];
+    NSString *hash = self.md5;
     if(hash == nil)
     {
         [self OE_calculateHashes];
-        hash = [self md5HashIfAvailable];
+        hash = self.md5HashIfAvailable;
     }
     return hash;
 }
 
-- (NSString *)md5HashIfAvailable
+- (nullable NSString *)md5HashIfAvailable
 {
-    return [self md5];
-}
-
-- (NSString *)crcHash
-{
-    NSString *hash = [self crc32];
-    if(hash == nil)
-    {
-        [self OE_calculateHashes];
-        hash = [self crcHashIfAvailable];
-    }
-    return hash;    
-}
-
-- (NSString *)crcHashIfAvailable
-{
-    return [self crc32];
+    return self.md5;
 }
 
 - (void)OE_calculateHashes
 {
     NSError *error = nil;
-    NSURL *url = [self URL];
+    NSURL *url = self.URL;
     
     if(![url checkResourceIsReachableAndReturnError:&error])
     {
@@ -162,34 +136,32 @@
         return;
     }
     
-    NSString *md5Hash, *crc32Hash;
-    if(![[NSFileManager defaultManager] hashFileAtURL:url md5:&md5Hash crc32:&crc32Hash error:&error])
+    NSString *md5Hash;
+    if(![[NSFileManager defaultManager] hashFileAtURL:url md5:&md5Hash error:&error])
     {
         DLog(@"%@", error);
         // TODO: mark self as file missing
         return;
     }
     
-    [self setCrc32:[crc32Hash lowercaseString]];
-    [self setMd5:[md5Hash lowercaseString]];
+    self.md5 = md5Hash.lowercaseString;
 }
 
-
-- (NSArray *)normalSaveStates
+- (nullable NSArray <OEDBSaveState *> *)normalSaveStates
 {
     NSPredicate *predicate = [NSPredicate predicateWithFormat:@"NOT (name beginswith[c] %@)", @"OESpecialState"];
-    NSSet *set = [self saveStates];
+    NSSet *set = self.saveStates;
     set = [set filteredSetUsingPredicate:predicate];
     
-    return [set allObjects];
+    return set.allObjects;
 }
 
-- (NSArray *)normalSaveStatesByTimestampAscending:(BOOL)ascFlag
+- (nullable NSArray <OEDBSaveState *> *)normalSaveStatesByTimestampAscending:(BOOL)ascFlag
 {
-    return [[self normalSaveStates] sortedArrayUsingComparator:
+    return [self.normalSaveStates sortedArrayUsingComparator:
             ^ NSComparisonResult (OEDBSaveState *obj1, OEDBSaveState *obj2)
             {
-                NSDate *d1 = [obj1 timestamp], *d2 = [obj2 timestamp];
+                NSDate *d1 = obj1.timestamp, *d2 = obj2.timestamp;
                 
                 return ascFlag ? [d2 compare:d1] : [d1 compare:d2];
             }];
@@ -198,70 +170,65 @@
 
 - (NSInteger)saveStateCount
 {
-    return [[self saveStates] count];
+    return self.saveStates.count;
 }
 
-- (OEDBSaveState *)autosaveState
+- (nullable OEDBSaveState *)autosaveState
 {
     NSPredicate *predicate = [NSPredicate predicateWithFormat:@"name beginswith[c] %@", OESaveStateAutosaveName];
-    NSSet *set = [self saveStates];
-    set = [set filteredSetUsingPredicate:predicate];
 
-    return [set anyObject];
+    return [self.saveStates filteredSetUsingPredicate:predicate].anyObject;
 }
 
-- (NSArray *)quickSaveStates
+- (nullable NSArray *)quickSaveStates
 {
     NSPredicate *predicate = [NSPredicate predicateWithFormat:@"name beginswith[c] %@", OESaveStateQuicksaveName];
-    NSSet *set = [self saveStates];
-    set = [set filteredSetUsingPredicate:predicate];
     
-    return [set allObjects];
+    return [self.saveStates filteredSetUsingPredicate:predicate].allObjects;
 }
 
-- (OEDBSaveState *)quickSaveStateInSlot:(NSInteger)num
+- (nullable OEDBSaveState *)quickSaveStateInSlot:(NSInteger)num
 {
     NSString *quickSaveName = [OEDBSaveState nameOfQuickSaveInSlot:num];
     NSPredicate *predicate = [NSPredicate predicateWithFormat:@"name beginswith[c] %@", quickSaveName];
-    NSSet *set = [self saveStates];
-    set = [set filteredSetUsingPredicate:predicate];
     
-    return [set anyObject];
+    return [self.saveStates filteredSetUsingPredicate:predicate].anyObject;
 }
 
-- (OEDBSaveState *)saveStateWithName:(NSString *)string
+- (nullable OEDBSaveState *)saveStateWithName:(NSString *)string
 {
     NSPredicate *predicate = [NSPredicate predicateWithFormat:@"name == %@", string];
-    NSSet *set = [self saveStates];
-    set = [set filteredSetUsingPredicate:predicate];
     
-    return [set anyObject];
+    return [self.saveStates filteredSetUsingPredicate:predicate].anyObject;
 }
 
 - (void)removeMissingStates
 {
-    NSSet *set = [[self saveStates] copy];
-    [set makeObjectsPerformSelector:@selector(deleteAndRemoveFilesIfInvalid)];
-    [self save];
+    NSSet *set = self.saveStates.copy;
+    BOOL needsSave = NO;
+    for (OEDBSaveState *state in set)
+        needsSave |= [state deleteAndRemoveFilesIfInvalid];
+    if (needsSave)
+        [self save];
 }
 
 - (void)incrementPlayCount
 {
-    NSInteger currentCount = [[self playCount] integerValue];
+    NSInteger currentCount = self.playCount.integerValue;
     currentCount++;
-    [self setPlayCount:@(currentCount)];
+    self.playCount = @(currentCount);
 }
 
 - (void)addTimeIntervalToPlayTime:(NSTimeInterval)timeInterval
 {
-    NSTimeInterval currentPlayTime = [[self playTime] doubleValue];
+    NSTimeInterval currentPlayTime = self.playTime.doubleValue;
     currentPlayTime += timeInterval;
-    [self setPlayTime:@(currentPlayTime)];
+    self.playTime = @(currentPlayTime);
 }
 
 // Core Data does not care about getter= overrides in modelled property declarations,
 // so we provide our own -isFavorite
-- (NSNumber *)isFavorite
+- (nullable NSNumber *)isFavorite
 {
     // We cannot use -valueForKey:@"favorite" since vanilla KVC would end up
     // calling this very method, so we use -primitiveValueForKey: instead
@@ -276,43 +243,59 @@
 }
 
 #pragma mark - File Handling
+
 - (BOOL)consolidateFilesWithError:(NSError**)error
 {
-    NSURL *url = [self URL];
-    OELibraryDatabase *library = [self libraryDatabase];
-    NSURL *romsFolderURL = [library romsFolderURL];
+    NSURL *url = self.URL;
+    OELibraryDatabase *library = self.libraryDatabase;
+    NSURL *romsFolderURL = library.romsFolderURL;
 
     if([url checkResourceIsReachableAndReturnError:nil] && ![url isSubpathOfURL:romsFolderURL])
     {
         BOOL romFileLocked = NO;
-        if([[[[NSFileManager defaultManager] attributesOfItemAtPath:[url path] error:nil] objectForKey:NSFileImmutable] boolValue])
+        if([[[NSFileManager defaultManager] attributesOfItemAtPath:url.path error:nil][NSFileImmutable] boolValue])
         {
             romFileLocked = YES;
-            [[NSFileManager defaultManager] setAttributes:@{ NSFileImmutable: @(FALSE) } ofItemAtPath:[url path] error:nil];
+            [[NSFileManager defaultManager] setAttributes:@{ NSFileImmutable: @(FALSE) } ofItemAtPath:url.path error:nil];
         }
 
-        NSString *fullName  = [url lastPathComponent];
-        NSString *extension = [fullName pathExtension];
-        NSString *baseName  = [fullName stringByDeletingPathExtension];
+        NSString *fullName  = url.lastPathComponent;
+        NSString *extension = fullName.pathExtension;
+        NSString *baseName  = fullName.stringByDeletingPathExtension;
 
-        OEDBSystem  *system = [[self game] system];
+        OEDBSystem *system = self.game.system;
 
         NSURL *unsortedFolder = [library romsFolderURLForSystem:system];
+        // Copy game to subfolder in system's folder if system supports discs with descriptor file
+        if (system.plugin.supportsDiscsWithDescriptorFile) {
+            unsortedFolder = [unsortedFolder URLByAppendingPathComponent:baseName isDirectory:YES];
+
+            unsortedFolder = [unsortedFolder uniqueURLUsingBlock:^NSURL *(NSInteger triesCount) {
+                NSString *newName = [NSString stringWithFormat:@"%@ %ld", baseName, triesCount];
+                return [unsortedFolder.URLByDeletingLastPathComponent URLByAppendingPathComponent:newName isDirectory:YES];
+            }];
+
+            [NSFileManager.defaultManager createDirectoryAtURL:unsortedFolder withIntermediateDirectories:YES attributes:nil error:nil];
+        }
         NSURL *romURL         = [unsortedFolder URLByAppendingPathComponent:fullName];
         romURL = [romURL uniqueURLUsingBlock:^NSURL *(NSInteger triesCount) {
             NSString *newName = [NSString stringWithFormat:@"%@ %ld.%@", baseName, triesCount, extension];
             return [unsortedFolder URLByAppendingPathComponent:newName];
         }];
 
-        if([[NSFileManager defaultManager] copyItemAtURL:url toURL:romURL error:error])
-        {
-            [self setURL:romURL];
-            NSLog(@"New URL: %@", romURL);
-        }
-        else if(error != nil) return NO;
+        OEFile *file = [OEFile fileWithURL:url error:nil];
 
-        if(romFileLocked)
-            [[NSFileManager defaultManager] setAttributes:@{ NSFileImmutable: @(YES) } ofItemAtPath:[url path] error:nil];
+        OEFile *copiedFile = [file fileByCopyingFileToURL:romURL error:error];
+        if (copiedFile != nil) {
+            // Lock original file again
+            if(romFileLocked)
+                [url setResourceValue:@YES forKey:NSURLIsUserImmutableKey error:nil];
+
+            self.URL = romURL;
+            DLog(@"New URL: %@", romURL);
+        } else if(error != nil) {
+            return NO;
+        }
     }
     return YES;
 }
@@ -320,14 +303,14 @@
 - (BOOL)filesAvailable
 {
     NSError *error = nil;
-    BOOL    result = [[self URL] checkResourceIsReachableAndReturnError:&error];
+    BOOL    result = [self.URL checkResourceIsReachableAndReturnError:&error];
     return result;
 }
 #pragma mark - Mainpulating a rom
 
 - (void)markAsPlayedNow
 {
-    [self setLastPlayed:[NSDate date]];
+    self.lastPlayed = [NSDate date];
 }
 
 #pragma mark - Core Data utilities
@@ -336,7 +319,7 @@
 {
     NSURL *url = [self URL];
 
-    if(moveToTrash && [url isSubpathOfURL:[[self libraryDatabase] romsFolderURL]])
+    if(moveToTrash && [url isSubpathOfURL:self.libraryDatabase.romsFolderURL])
     {
         NSInteger count = 1;
         if([self archiveFileIndex])
@@ -344,38 +327,48 @@
             NSPredicate *predicate = [NSPredicate predicateWithFormat:@"location == %@", [self location]];
             NSFetchRequest *fetchRequest = [NSFetchRequest fetchRequestWithEntityName:[[self class] entityName]];
             [fetchRequest setPredicate:predicate];
-            count = [[self managedObjectContext] countForFetchRequest:fetchRequest error:nil];
+            count = [self.managedObjectContext countForFetchRequest:fetchRequest error:nil];
         }
 
         if(count == 1)
         {
-            NSString *path = [url path];
-            NSString *source = [path stringByDeletingLastPathComponent];
-            NSArray *files = @[[path lastPathComponent]];
+            OEFile *file = [OEFile fileWithURL:url error:nil];
+            if (file) {
+                BOOL willDeleteSubFolder = NO;
 
-            if([[[path pathExtension] lowercaseString] isEqualToString:@"cue"])
-            {
-                OECUESheet *sheet = [[OECUESheet alloc] initWithPath:path];
-                NSArray *additionalFileNames = [sheet referencedFileNames];
-                files = [files arrayByAddingObjectsFromArray:additionalFileNames];
-            }
-            else if([[[path pathExtension] lowercaseString] isEqualToString:@"ccd"])
-            {
-                OECloneCD *ccd = [[OECloneCD alloc] initWithURL:url];
-                NSArray *additionalFileNames = [ccd referencedFileNames];
-                files = [files arrayByAddingObjectsFromArray:additionalFileNames];
-            }
+                // Delete game in subfolder in system's folder if system supports discs with descriptor file
+                OEDBSystem *system = self.game.system;
+                if (system.plugin.supportsDiscsWithDescriptorFile) {
+                    NSString *truncatedFolderPath = file.fileURL.URLByDeletingLastPathComponent.URLByDeletingLastPathComponent.absoluteString;
+                    BOOL isFileInSubFolder = ![truncatedFolderPath isEqualToString:self.libraryDatabase.romsFolderURL.absoluteString];
 
-            [[NSWorkspace sharedWorkspace] performFileOperation:NSWorkspaceRecycleOperation source:source destination:@"" files:files tag:NULL];
+                    // Games of systems that support discs are now copied to subfolders with their referenced files, so delete the whole subfolder. Else, handle legacy case.
+                    if (isFileInSubFolder)
+                        willDeleteSubFolder = YES;
+                }
+
+                if (willDeleteSubFolder) {
+                    [NSWorkspace.sharedWorkspace recycleURLs:@[file.fileURL.URLByDeletingLastPathComponent] completionHandler:nil];
+                } else {
+                    [NSWorkspace.sharedWorkspace recycleURLs:file.allFileURLs completionHandler:nil];
+                }
+            }
         } else DLog(@"Keeping file, other roms depent on it!");
     }
 
     if(!statesFlag)
     {
-        // TODO: remove states
+        if (self.saveStateCount) {
+            NSURL *statesFolderURL = [self.saveStates.anyObject.URL URLByDeletingLastPathComponent];
+
+            OEFile *file = [OEFile fileWithURL:statesFolderURL error:nil];
+            if (file) {
+                [[NSWorkspace sharedWorkspace] recycleURLs:file.allFileURLs completionHandler:nil];
+            }
+        }
     }
 
-    [[self managedObjectContext] deleteObject:self];
+    [self.managedObjectContext deleteObject:self];
 }
 
 + (NSString *)entityName
@@ -388,7 +381,7 @@
     return [NSEntityDescription entityForName:[self entityName] inManagedObjectContext:context];
 }
 
-- (NSMutableSet *)mutableSaveStates
+- (nullable NSMutableSet <OEDBSaveState *> *)mutableSaveStates
 {
     return [self mutableSetValueForKey:@"saveStates"];
 }
@@ -405,19 +398,20 @@
 //    NSString *subPrefix = [prefix stringByAppendingString:@"-----"];
     NSLog(@"%@ Beginning of ROM dump", prefix);
 
-    NSLog(@"%@ ROM location is %@", prefix, [self location]);
-    NSLog(@"%@ favorite? %s", prefix, BOOL_STR([self isFavorite]));
-    NSLog(@"%@ CRC32 is %@", prefix, [self crc32]);
-    NSLog(@"%@ MD5 is %@", prefix, [self md5]);
-    NSLog(@"%@ last played is %@", prefix, [self lastPlayed]);
-    NSLog(@"%@ file size is %@", prefix, [self fileSize]);
-    NSLog(@"%@ play count is %@", prefix, [self playCount]);
-    NSLog(@"%@ play time is %@", prefix, [self playTime]);
-    NSLog(@"%@ ROM is linked to a game? %s", prefix, ([self game] ? "YES" : "NO"));
+    NSLog(@"%@ ROM location is %@", prefix, self.location);
+    NSLog(@"%@ favorite? %s", prefix, BOOL_STR(self.isFavorite));
+    NSLog(@"%@ MD5 is %@", prefix, self.md5);
+    NSLog(@"%@ last played is %@", prefix, self.lastPlayed);
+    NSLog(@"%@ file size is %@", prefix, self.fileSize);
+    NSLog(@"%@ play count is %@", prefix, self.playCount);
+    NSLog(@"%@ play time is %@", prefix, self.playTime);
+    NSLog(@"%@ ROM is linked to a game? %s", prefix, (self.game ? "YES" : "NO"));
 
-    NSLog(@"%@ Number of save states for this ROM is %ld", prefix, (unsigned long)[self saveStateCount]);
+    NSLog(@"%@ Number of save states for this ROM is %ld", prefix, (unsigned long)self.saveStateCount);
 
     NSLog(@"%@ End of ROM dump\n\n", prefix);
 }
 
 @end
+
+NS_ASSUME_NONNULL_END

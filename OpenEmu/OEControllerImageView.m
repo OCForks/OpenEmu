@@ -25,7 +25,10 @@
  */
 
 #import "OEControllerImageView.h"
-#import "NSImage+OEDrawingAdditions.h"
+
+@import QuartzCore;
+
+#import "OpenEmu-Swift.h"
 
 #define OverlayAlphaON  0.5
 #define OverlayAlphaOFF 0.0
@@ -39,7 +42,7 @@ NSString *const OEDebugDrawControllerMaskKey = @"drawControllerMask";
 - (NSPoint)highlightPoint;
 @end
 
-@interface OEControllerImageView ()
+@interface OEControllerImageView () <CAAnimationDelegate>
 - (void)OE_commonControllerImageViewInit;
 - (void)OE_setHighlightPoint:(NSPoint)value animated:(BOOL)animated;
 - (NSPoint)OE_highlightPointForKey:(NSString *)aKey;
@@ -64,7 +67,11 @@ NSString *const OEDebugDrawControllerMaskKey = @"drawControllerMask";
     ringAnimation.delegate = self;
     
     [self setWantsLayer:YES];
-    [self setAnimations:[NSDictionary dictionaryWithObjectsAndKeys:ringAnimation, @"ringAlpha", ringAnimation, @"ringPosition", anim, @"overlayAlpha",  nil]];
+    [self setAnimations:@{
+                          @"ringAlpha" : ringAnimation,
+                          @"ringPosition" : ringAnimation,
+                          @"overlayAlpha" : anim
+                          }];
 }
 
 - (id)initWithCoder:(NSCoder *)coder 
@@ -85,11 +92,6 @@ NSString *const OEDebugDrawControllerMaskKey = @"drawControllerMask";
     return self;
 }
 
-- (void)dealloc 
-{
-    [[NSNotificationCenter defaultCenter] removeObserver:self];
-}
-
 #pragma mark -
 
 - (void)drawRect:(NSRect)dirtyRect
@@ -100,10 +102,10 @@ NSString *const OEDebugDrawControllerMaskKey = @"drawControllerMask";
     targetRect.size = [self image].size;
     targetRect.origin = NSMakePoint(([self frame].size.width-image.size.width)/2, 0);
     
-    [[self image] drawInRect:targetRect fromRect:NSZeroRect operation:NSCompositeCopy fraction:1.0 respectFlipped:NO hints:NoInterpol];
+    [[self image] drawInRect:targetRect fromRect:NSZeroRect operation:NSCompositingOperationCopy fraction:1.0 respectFlipped:NO hints:@{ NSImageHintInterpolation: @(NSImageInterpolationNone) }];
     
     if([[NSUserDefaults standardUserDefaults] boolForKey:OEDebugDrawControllerMaskKey])
-        [[self imageMask] drawInRect:targetRect fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:1.0 respectFlipped:NO hints:NoInterpol];
+        [[self imageMask] drawInRect:targetRect fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1.0 respectFlipped:NO hints:@{ NSImageHintInterpolation: @(NSImageInterpolationNone) }];
 
     
     if([self overlayAlpha] != OverlayAlphaOFF)
@@ -112,12 +114,12 @@ NSString *const OEDebugDrawControllerMaskKey = @"drawControllerMask";
         NSRect rect = NSMakeRect(targetRect.origin.x+ringPosition.x-33, targetRect.origin.y+ringPosition.y-33, 66.0, 66.0);
         
         NSBezierPath *path = [NSBezierPath bezierPathWithRect:[self bounds]];
-        [path setWindingRule:NSEvenOddWindingRule];
+        [path setWindingRule:NSWindingRuleEvenOdd];
         [path appendBezierPathWithOvalInRect:rect];
         [path setClip];
         
         [[NSColor colorWithDeviceWhite:0.0 alpha:[self overlayAlpha]] setFill];
-        NSRectFillUsingOperation([self bounds], NSCompositeSourceAtop);
+        NSRectFillUsingOperation([self bounds], NSCompositingOperationSourceAtop);
         [NSGraphicsContext restoreGraphicsState];
     }
     
@@ -125,7 +127,7 @@ NSString *const OEDebugDrawControllerMaskKey = @"drawControllerMask";
     {
         NSPoint highlightP = NSMakePoint(targetRect.origin.x+ringPosition.x-38, targetRect.origin.y+ringPosition.y-45);
         NSImage *highlightImage = [NSImage imageNamed:@"controls_highlight"]; 
-        [highlightImage drawAtPoint:highlightP fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:[self ringAlpha]];
+        [highlightImage drawAtPoint:highlightP fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:[self ringAlpha]];
     }
     
 }

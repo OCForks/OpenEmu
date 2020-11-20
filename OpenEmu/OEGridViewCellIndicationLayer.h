@@ -24,14 +24,15 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+@import QuartzCore;
 
-typedef enum
+typedef NS_ENUM(NSInteger, OEGridViewCellIndicationType)
 {
     OEGridViewCellIndicationTypeNone,
     OEGridViewCellIndicationTypeFileMissing,
     OEGridViewCellIndicationTypeProcessing,
     OEGridViewCellIndicationTypeDropOn,
-} OEGridViewCellIndicationType;
+};
 
 @interface OEGridViewCellIndicationLayer : CALayer
 

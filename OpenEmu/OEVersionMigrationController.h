@@ -24,7 +24,7 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Cocoa/Cocoa.h>
+@import Cocoa;
 #import "SUVersionComparisonProtocol.h"
 
 #define OEVersionMigrationErrorDomain @"OEVersionMigrationErrorDomain"
@@ -41,7 +41,7 @@
 
 @property(weak) id<SUVersionComparison> versionComparator;
 
-+ (id)defaultMigrationController;
+@property(class, readonly) OEVersionMigrationController *defaultMigrationController;
 
 - (void)runMigrationIfNeeded;
 - (NSArray *)allMigrationVersions;

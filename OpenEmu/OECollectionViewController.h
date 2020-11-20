@@ -24,74 +24,77 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Cocoa/Cocoa.h>
+@import Cocoa;
 
-#import "OETableView.h"
 #import "OEGridView.h"
-#import "IKImageFlowView.h"
 #import "OEBlankSlateView.h"
 
-#import "NSViewController+OEAdditions.h"
-
-#import "OEMainWindowController.h"
-#import "OELibrarySubviewController.h"
 #import "OECollectionViewItemProtocol.h"
 
-@class OELibraryController;
-@class OEHorizontalSplitView;
+@class OEDBGame;
+@class OEGameTableView;
+@class OELibraryToolbar;
+@class OELibraryDatabase;
 @class OEArrayController;
 
 typedef NS_ENUM(NSInteger, OECollectionViewControllerViewTag) {
     OEBlankSlateTag = -1,
     OEGridViewTag   = 0,
-    OEFlowViewTag   = 1,
     OEListViewTag   = 2
 };
 
-@interface OECollectionViewController : NSViewController <OEBlankSlateViewDelegate, NSTableViewDelegate, NSTableViewDataSource, OELibrarySubviewController, OEGridViewDelegate, OEGridViewMenuSource>
+NS_ASSUME_NONNULL_BEGIN;
+
+extern NSString * const OELastGridSizeKey;
+extern NSString * const OELastCollectionViewKey;
+
+@interface OECollectionViewController : NSViewController <OEBlankSlateViewDelegate, NSTableViewDelegate, NSTableViewDataSource, OEGridViewDelegate, OEGridViewMenuSource, QLPreviewPanelDelegate, QLPreviewPanelDataSource>
 
 - (void)reloadData;
 - (void)setNeedsReload;
 - (void)setNeedsReloadVisible;
 - (void)reloadDataIndexes:(NSIndexSet *)indexSet;
 - (void)fetchItems;
-- (NSArray*)defaultSortDescriptors;
+- (NSArray *)defaultSortDescriptors;
 - (void)setSortDescriptors:(NSArray*)descriptors;
 
 - (void)updateBlankSlate;
 - (BOOL)shouldShowBlankSlate;
 
+- (void)showGridView;
+- (void)showListView;
+- (void)zoomGridViewWithValue:(CGFloat)zoomValue;
+
 #pragma mark -
-- (NSArray *)selectedGames;
+@property (readonly) NSArray<OEDBGame *> *selectedGames;
 @property (nonatomic) NSIndexSet *selectionIndexes;
 
-#pragma mark - View Selection
-- (IBAction)switchToGridView:(id)sender;
-- (IBAction)switchToFlowView:(id)sender;
-- (IBAction)switchToListView:(id)sender;
+#pragma mark - Context Menu
+- (NSMenu * _Nullable)menuForItemsAtIndexes:(NSIndexSet *)indexes;
 
-#pragma mark - Toolbar Actions
-- (IBAction)search:(id)sender;
-- (IBAction)changeGridSize:(id)sender;
-
-- (IBAction)deleteSelectedItems:(id)sender;
-
-#pragma mark -
-#pragma mark Context Menu
-- (NSMenu*)menuForItemsAtIndexes:(NSIndexSet*)indexes;
+#pragma mark - Quick Look
+- (void)refreshPreviewPanelIfNeeded;
+/* subclass these to implement quicklook for a specific collection */
+- (BOOL)acceptsPreviewPanelControl:(QLPreviewPanel * _Nullable)panel;
+- (NSInteger)numberOfPreviewItemsInPreviewPanel:(QLPreviewPanel * _Nullable)panel;
+- (id <QLPreviewItem>)previewPanel:(QLPreviewPanel * _Nullable)panel previewItemAtIndex:(NSInteger)index;
+- (NSInteger)imageBrowserViewIndexForPreviewItem:(id <QLPreviewItem> _Nullable)item;
 
 #pragma mark -
-- (id <OECollectionViewItemProtocol>)representedObject;
-#pragma mark -
-@property(unsafe_unretained) IBOutlet OELibraryController *libraryController;
+@property(strong, nullable) id<OECollectionViewItemProtocol> representedObject;
+
+@property(nonatomic, readonly) OECollectionViewControllerViewTag selectedViewTag;
+@property(nonatomic, nullable) OELibraryDatabase *database;
+@property(nonatomic, readonly, nullable) OELibraryToolbar *toolbar;
+
 @end
 
 @interface OECollectionViewController ()
-@property (assign) IBOutlet IKImageFlowView *coverFlowView;
-@property (assign) IBOutlet OETableView     *listView;
-@property (assign) IBOutlet OEGridView      *gridView;
+@property (assign, nullable) IBOutlet OEGameTableView *listView;
+@property (assign, nullable) IBOutlet OEGridView      *gridView;
 - (void)OE_switchToView:(OECollectionViewControllerViewTag)tag;
 - (void)OE_showView:(OECollectionViewControllerViewTag)tag;
-- (void)OE_setupToolbarStatesForViewTag:(OECollectionViewControllerViewTag)tag;
 
 @end
+
+NS_ASSUME_NONNULL_END;

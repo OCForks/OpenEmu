@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2011, OpenEmu Team
+ Copyright (c) 2015, OpenEmu Team
  
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -25,7 +25,8 @@
  */
 
 #import "OEDBCollectionFolder.h"
-#import "OETheme.h"
+
+NS_ASSUME_NONNULL_BEGIN
 
 @implementation OEDBCollectionFolder
 
@@ -35,9 +36,10 @@
 }
 
 #pragma mark - SidebarItem Protocol
-- (NSImage *)sidebarIcon
+
+- (nullable NSImage *)sidebarIcon
 {
-    return [[OETheme sharedTheme] imageForKey:@"collections_folder" forState:OEThemeStateDefault];
+    return nil;
 }
 
 - (BOOL)hasSubCollections
@@ -46,7 +48,8 @@
 }
 
 #pragma mark - Game Collection View Item
-- (NSString *)collectionViewName
+
+- (nullable NSString *)collectionViewName
 {
     return [self valueForKey:@"name"];
 }
@@ -65,4 +68,7 @@
 {
     return NO;
 }
+
 @end
+
+NS_ASSUME_NONNULL_END

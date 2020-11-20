@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2011, OpenEmu Team
+ Copyright (c) 2015, OpenEmu Team
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -24,21 +24,23 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Foundation/Foundation.h>
-#import "OEROMImporter.h"
+@import Foundation;
+@import CoreData;
 
-#import "OEDBRom.h"
-#import "OEDBGame.h"
-#import "OEDBSystem.h"
-
+@class OEDBRom;
+@class OEDBGame;
+@class OEDBSystem;
 @class OEROMImporter;
+@protocol OESidebarItem;
+
+NS_ASSUME_NONNULL_BEGIN
 
 extern const int OELibraryErrorCodeFolderNotFound;
 extern const int OELibraryErrorCodeFileInFolderNotFound;
 
 #define OEDatabaseFileName @"Library.storedata"
 
-extern NSString *const OELibraryDidLoadNotificationName;
+extern NSNotificationName const OELibraryDidLoadNotificationName;
 
 extern NSString *const OEDatabasePathKey;
 extern NSString *const OEDefaultDatabasePathKey;
@@ -49,54 +51,62 @@ extern NSString *const OEScreenshotFolderURLKey;
 
 extern NSString *const OEManagedObjectContextHasDirectChangesKey;
 
-@interface OELibraryDatabase : NSObject
-+ (OELibraryDatabase *)defaultDatabase;
-+ (BOOL)loadFromURL:(NSURL *)url error:(NSError *__autoreleasing*)outError;
+@interface OELibraryDatabase: NSObject
 
-- (NSManagedObjectContext*)writerContext;
-- (NSManagedObjectContext*)mainThreadContext;
+@property(class, readonly, nullable) OELibraryDatabase *defaultDatabase;
 
-- (NSManagedObjectContext*)makeChildContext;
-- (NSManagedObjectContext*)makeWriterChildContext;
++ (BOOL)loadFromURL:(NSURL *)libraryURL error:(NSError **)error;
 
-@property (strong) OEROMImporter *importer;
+@property(readonly) NSManagedObjectContext *writerContext;
+@property(readonly) NSManagedObjectContext *mainThreadContext;
+
+- (NSManagedObjectContext *)makeChildContext;
+- (NSManagedObjectContext *)makeWriterChildContext;
+
+@property(strong) OEROMImporter *importer;
 
 #pragma mark - Administration
+
 - (void)disableSystemsWithoutPlugin;
 
 #pragma mark - Database queries
-- (NSArray *)collections;
-- (NSArray *)romsForPredicate:(NSPredicate*)predicate;
-- (NSArray *)media;
-- (NSArray *)lastPlayedRoms;
-- (NSDictionary *)lastPlayedRomsBySystem;
+
+@property(readonly) NSArray<id<OESidebarItem>> *collections;
+- (NSArray *)romsForPredicate:(NSPredicate *)predicate;
+@property(readonly, nullable) NSArray <OEDBRom *> *lastPlayedRoms;
+@property(readonly, nullable) NSDictionary <NSString *, NSArray <OEDBRom *> *> *lastPlayedRomsBySystem;
 
 #pragma mark - Database Collection editing
-- (id)addNewCollection:(NSString *)name;
-- (id)addNewSmartCollection:(NSString *)name;
-- (id)addNewCollectionFolder:(NSString *)name;
+
+- (id)addNewCollection:(nullable NSString *)name;
+- (id)addNewSmartCollection:(nullable NSString *)name;
+- (id)addNewCollectionFolder:(nullable NSString *)name;
 
 #pragma mark - Database Folders
-- (NSURL *)databaseFolderURL;
-- (NSURL *)romsFolderURL;
-- (void)setRomsFolderURL:(NSURL *)url;
-- (NSURL *)unsortedRomsFolderURL;
+
+@property(readonly) NSURL *databaseFolderURL;
+@property (nullable) NSURL *romsFolderURL;
+@property(readonly) NSURL *unsortedRomsFolderURL;
 - (NSURL *)romsFolderURLForSystem:(OEDBSystem *)system;
-- (NSURL *)stateFolderURL;
+@property(readonly) NSURL *stateFolderURL;
 - (NSURL *)stateFolderURLForSystem:(OEDBSystem *)system;
 - (NSURL *)stateFolderURLForROM:(OEDBRom *)rom;
-- (NSURL *)screenshotFolderURL;
-- (NSURL *)coverFolderURL;
-- (NSURL *)importQueueURL;
-- (NSURL *)autoImportFolderURL;
+@property(readonly) NSURL *screenshotFolderURL;
+@property(readonly) NSURL *coverFolderURL;
+@property(readonly) NSURL *importQueueURL;
+@property(readonly) NSURL *autoImportFolderURL;
 
 #pragma mark - OpenVGDB Sync
+
 - (void)startOpenVGDBSync;
 
-
 // Exposed for library migration
-@property(strong) NSPersistentStoreCoordinator *persistentStoreCoordinator;
+@property(strong, nullable) NSPersistentStoreCoordinator *persistentStoreCoordinator;
 
 #pragma mark - Debug
+
 - (void)dump;
+
 @end
+
+NS_ASSUME_NONNULL_END

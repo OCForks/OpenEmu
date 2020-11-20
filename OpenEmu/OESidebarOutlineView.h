@@ -23,20 +23,14 @@
  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#import <Foundation/Foundation.h>
 
-extern NSString *const OESidebarConsolesNotCollapsibleKey;
-extern NSString *const OESidebarTogglesSystemNotification;
+@import Cocoa;
 
 @interface OESidebarOutlineView : NSOutlineView <NSDraggingDestination>
-@property BOOL isDrawingAboveDropHighlight;
 
 @property (strong) NSColor *dropBorderColor;
-@property (strong) NSColor *dropBackgroundColor;
 @property CGFloat dropBorderWidth;
 @property CGFloat dropCornerRadius;
+
 @end
 
-@interface OESidebarOutlineView (OEPrivate)
-- (void)setupOutlineCell;
-@end

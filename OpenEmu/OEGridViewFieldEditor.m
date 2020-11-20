@@ -25,7 +25,6 @@
  */
 
 #import "OEGridViewFieldEditor.h"
-#import "NSColor+OEAdditions.h"
 
 #pragma mark -
 
@@ -45,14 +44,16 @@
         [[textView cell] setScrollable:YES];
         [textView setBezeled:NO];
         [textView setAllowsEditingTextAttributes:NO];
+        [textView setBackgroundColor:NSColor.textBackgroundColor];
+        [textView setTextColor:NSColor.textColor];
         [self addSubview:textView];
 
         [self setAutoresizesSubviews:NO];
         [self setHidden:YES];
         [self setWantsLayer:YES];
 
-        NSFont *fieldEditorFont = [[NSFontManager sharedFontManager] fontWithFamily:@"Lucida Grande" traits:NSBoldFontMask weight:9 size:12];
-        [self setAlignment:NSCenterTextAlignment];
+        NSFont *fieldEditorFont = [NSFont boldSystemFontOfSize:12];
+        [self setAlignment:NSTextAlignmentCenter];
         [self setBorderColor:[NSColor blackColor]];
         [self setFont:fieldEditorFont];
         

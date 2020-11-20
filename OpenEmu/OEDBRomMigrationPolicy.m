@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2012, OpenEmu Team
+ Copyright (c) 2015, OpenEmu Team
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -25,29 +25,34 @@
  */
 
 #import "OEDBRomMigrationPolicy.h"
-#import "NSArray+OEAdditions.h"
 #import <XADMaster/XADArchive.h>
 #import "OELibraryDatabase.h"
-#import "NSURL+OELibraryAdditions.h"
+#import "NSArray+OEAdditions.h"
+
+#import "OpenEmu-Swift.h"
+
+NS_ASSUME_NONNULL_BEGIN
+
 extern NSString *const OELibraryRomsFolderURLKey;
+
 @implementation OEDBRomMigrationPolicy
 
 - (BOOL)createDestinationInstancesForSourceInstance:(NSManagedObject *)oldObject entityMapping:(NSEntityMapping *)mapping manager:(NSMigrationManager *)manager error:(NSError **)error
 {
-    NSAssert([[[manager sourceModel] versionIdentifiers] count]==1, @"Found a source model with various versionIdentifiers!");
+    NSAssert(manager.sourceModel.versionIdentifiers.count == 1, @"Found a source model with various versionIdentifiers!");
     
-    NSString *version = [[[manager sourceModel] versionIdentifiers] anyObject];
+    NSString *version = manager.sourceModel.versionIdentifiers. anyObject;
 
     if([version isEqualTo:@"1.0 Beta"])
     {
         NSData *bookmarkData = [oldObject valueForKey:@"bookmarkData"];
         NSURL *url = [NSURL URLByResolvingBookmarkData:bookmarkData options:0 relativeToURL:nil bookmarkDataIsStale:nil error:nil];
-        NSString *location = [url absoluteString];
+        NSString *location = url.absoluteString;
         if(location)
         {
-            NSArray *attributeMappings = [mapping attributeMappings];
+            NSArray<NSPropertyMapping *> *attributeMappings = mapping.attributeMappings;
             NSPropertyMapping *mapping = [attributeMappings firstObjectMatchingBlock:
-             ^ BOOL (id obj)
+             ^ BOOL (NSPropertyMapping *obj)
              {
                  return [[obj name] isEqualToString:@"location"];
              }];
@@ -56,12 +61,12 @@ extern NSString *const OELibraryRomsFolderURLKey;
     }
     else if([version isEqualTo:@"1.0 Beta 4"]) // Migrate from single rom archives to multi rom archives
     {
-        NSPersistentStoreCoordinator *coord = [[oldObject managedObjectContext] persistentStoreCoordinator];
+        NSPersistentStoreCoordinator *coord = oldObject.managedObjectContext.persistentStoreCoordinator;
         NSURL *romsFolder = [self romsFolderURLWithPersistentStoreCoordinator:coord];
 
         NSString *relativePath = [oldObject valueForKey:@"location"];
         NSURL *romURL = [NSURL URLWithString:relativePath relativeToURL:romsFolder];
-        NSString *fullPath = [romURL path];
+        NSString *fullPath = romURL.path;
         XADArchive *archive = nil;
         @try
         {
@@ -72,67 +77,67 @@ extern NSString *const OELibraryRomsFolderURLKey;
             archive = nil;
         }
         
-        if(archive && [archive numberOfEntries] == 1)
+        if(archive && archive.numberOfEntries == 1)
         {
-            NSArray *attributeMappings = [mapping attributeMappings];
+            NSArray<NSPropertyMapping *> *attributeMappings = mapping.attributeMappings;
             NSPropertyMapping *mapping = [attributeMappings firstObjectMatchingBlock:
-                                          ^ BOOL (id obj)
+                                          ^ BOOL (NSPropertyMapping *obj)
                                           {
                                               return [[obj name] isEqualToString:@"archiveFileIndex"];
                                           }];
-            [mapping setValueExpression:[NSExpression expressionForConstantValue:@(0)]];
+            mapping.valueExpression = [NSExpression expressionForConstantValue:@(0)];
         }
         else
         {
-            NSArray *attributeMappings = [mapping attributeMappings];
+            NSArray<NSPropertyMapping *> *attributeMappings = mapping.attributeMappings;
             NSPropertyMapping *mapping = [attributeMappings firstObjectMatchingBlock:
-                                          ^ BOOL (id obj)
+                                          ^ BOOL (NSPropertyMapping *obj)
                                           {
                                               return [[obj name] isEqualToString:@"archiveFileIndex"];
                                           }];
-            [mapping setValueExpression:[NSExpression expressionForConstantValue:nil]];
+            mapping.valueExpression = [NSExpression expressionForConstantValue:nil];
 
         }
     }
     else if([version isEqualToString:@"1.2"])
     {
-        NSPersistentStoreCoordinator *coord = [[oldObject managedObjectContext] persistentStoreCoordinator];
+        NSPersistentStoreCoordinator *coord = oldObject.managedObjectContext.persistentStoreCoordinator;
         NSURL *romsFolderURL = [self romsFolderURLWithPersistentStoreCoordinator:coord];
         NSString *urlString = [oldObject valueForKey:@"location"];
         NSURL *url = nil;
-        if([urlString rangeOfString:@"file://"].location == NSNotFound)
+        if(![urlString containsString:@"file://"])
              url = [NSURL URLWithString:urlString relativeToURL:romsFolderURL];
         else
             url = [NSURL URLWithString:urlString];
 
-        NSURL *relativeURL = [url urlRelativeToURL:romsFolderURL];
-        NSString *location = [relativeURL relativeString];
+        NSURL *relativeURL = [url URLRelativeToURL:romsFolderURL];
+        NSString *location = relativeURL.relativeString;
         if(location)
         {
-            NSArray *attributeMappings = [mapping attributeMappings];
+            NSArray<NSPropertyMapping *> *attributeMappings = mapping.attributeMappings;
             NSPropertyMapping *mapping = [attributeMappings firstObjectMatchingBlock:
-                                          ^ BOOL (id obj)
+                                          ^ BOOL (NSPropertyMapping *obj)
                                           {
                                               return [[obj name] isEqualToString:@"location"];
                                           }];
-            [mapping setValueExpression:[NSExpression expressionForConstantValue:location]];
+            mapping.valueExpression = [NSExpression expressionForConstantValue:location];
         }
     }
 
     return [super createDestinationInstancesForSourceInstance:oldObject entityMapping:mapping manager:manager error:error];
 }
 
-- (NSURL*)romsFolderURLWithPersistentStoreCoordinator:(NSPersistentStoreCoordinator*)coord
+- (NSURL *)romsFolderURLWithPersistentStoreCoordinator:(NSPersistentStoreCoordinator*)coord
 {
-    NSPersistentStore *persistentStore = [[coord persistentStores] lastObject];
+    NSPersistentStore *persistentStore = coord.persistentStores.lastObject;
     NSDictionary *metadata = [coord metadataForPersistentStore:persistentStore];
 
-    NSURL *databaseFolderURL = [[persistentStore URL] URLByDeletingLastPathComponent];
+    NSURL *databaseFolderURL = persistentStore.URL.URLByDeletingLastPathComponent;
     NSURL *result = nil;
-    if([metadata objectForKey:OELibraryRomsFolderURLKey])
+    if(metadata[OELibraryRomsFolderURLKey])
     {
-        NSString *urlString = [metadata objectForKey:OELibraryRomsFolderURLKey];
-        if([urlString rangeOfString:@"file://"].location == NSNotFound)
+        NSString *urlString = metadata[OELibraryRomsFolderURLKey];
+        if(![urlString containsString:@"file://"])
              result = [NSURL URLWithString:urlString relativeToURL:databaseFolderURL];
         else result = [NSURL URLWithString:urlString];
     }
@@ -141,7 +146,9 @@ extern NSString *const OELibraryRomsFolderURLKey;
         result = [databaseFolderURL URLByAppendingPathComponent:@"roms" isDirectory:YES];
     }
 
-    return [result standardizedURL];
+    return result.standardizedURL;
 }
 
 @end
+
+NS_ASSUME_NONNULL_END

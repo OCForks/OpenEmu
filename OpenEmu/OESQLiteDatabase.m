@@ -39,8 +39,8 @@ NSString * const OESQLiteErrorDomain = @"OESQLiteErrorDomain";
 {
     if(self = [super init])
     {
-        NSString *path = [url path];
-        int sqlerr = sqlite3_open([path cStringUsingEncoding:NSUTF8StringEncoding], &connection);
+        const char *path = url.path.fileSystemRepresentation;
+        int sqlerr = sqlite3_open(path, &connection);
         if(sqlerr != SQLITE_OK)
         {
             sqlite3_close(connection);
@@ -116,15 +116,15 @@ NSString * const OESQLiteErrorDomain = @"OESQLiteErrorDomain";
     int type  = sqlite3_column_type(stmt, column);
     switch (type) {
         case SQLITE_INTEGER:
-            value = [NSNumber numberWithFloat:sqlite3_column_int(stmt, column)];
+            value = @(sqlite3_column_int(stmt, column));
             break;
         case SQLITE_FLOAT:
-            value = [NSNumber numberWithDouble:sqlite3_column_double(stmt, column)];
+            value = @(sqlite3_column_double(stmt, column));
             break;
         case SQLITE_TEXT:
         {
             const char * ctext = (const char * )sqlite3_column_text(stmt, column);
-            value = [NSString stringWithCString:ctext encoding:NSUTF8StringEncoding];
+            value = @(ctext);
             break;
         }
         case SQLITE_NULL:

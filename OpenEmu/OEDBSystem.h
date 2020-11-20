@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2011, OpenEmu Team
+ Copyright (c) 2015, OpenEmu Team
  
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -24,51 +24,59 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Foundation/Foundation.h>
+@import Foundation;
 #import "OEDBItem.h"
 
-extern NSString * const OEDBSystemsDidChangeNotification;
+@class OEDBGame, OESystemPlugin, OELibraryDatabase, OEFile;
 
-@class OESystemPlugin, OELibraryDatabase;
+NS_ASSUME_NONNULL_BEGIN
+
+extern NSNotificationName const OEDBSystemAvailabilityDidChangeNotification;
+
 @interface OEDBSystem : OEDBItem
+
 + (NSInteger)systemsCountInContext:(NSManagedObjectContext *)context;
-+ (NSInteger)systemsCountInContext:(NSManagedObjectContext *)context error:(NSError**)error;
++ (NSInteger)systemsCountInContext:(NSManagedObjectContext *)context error:(NSError **)error;
 
-+ (NSArray*)allSystemsInContext:(NSManagedObjectContext *)context;
-+ (NSArray*)allSystemsInContext:(NSManagedObjectContext *)context error:(NSError**)error;
++ (nullable NSArray <OEDBSystem *> *)allSystemsInContext:(NSManagedObjectContext *)context;
++ (nullable NSArray <OEDBSystem *> *)allSystemsInContext:(NSManagedObjectContext *)context error:(NSError **)error;
 
-+ (NSArray*)allSystemIdentifiersInContext:(NSManagedObjectContext*)context;
++ (NSArray <NSString *> *)allSystemIdentifiersInContext:(NSManagedObjectContext *)context;
 
-+ (NSArray*)enabledSystemsinContext:(NSManagedObjectContext *)context;
-+ (NSArray*)enabledSystemsinContext:(NSManagedObjectContext *)context error:(NSError**)outError;
++ (nullable NSArray <OEDBSystem *> *)enabledSystemsinContext:(NSManagedObjectContext *)context;
++ (nullable NSArray <OEDBSystem *> *)enabledSystemsinContext:(NSManagedObjectContext *)context error:(NSError **)outError;
 
-+ (NSArray*)systemsForFileWithURL:(NSURL *)url inContext:(NSManagedObjectContext *)context;
-+ (NSArray*)systemsForFileWithURL:(NSURL *)url inContext:(NSManagedObjectContext *)context error:(NSError**)error;
++ (NSArray <OEDBSystem *> *)systemsForFileWithURL:(NSURL *)fileURL inContext:(NSManagedObjectContext *)context;
++ (NSArray <OEDBSystem *> *)systemsForFile:(OEFile *)file inContext:(NSManagedObjectContext *)context error:(NSError**)error;
++ (NSArray <OEDBSystem *> * _Nullable)systemsForFileWithURL:(NSURL *)fileURL inContext:(NSManagedObjectContext *)context error:(NSError**)error;
 
-+ (NSString*)headerForFileWithURL:(NSURL *)url forSystem:(NSString *)identifier;
-+ (NSString*)serialForFileWithURL:(NSURL *)url forSystem:(NSString *)identifier;
++ (NSString *)headerForFile:(__kindof OEFile *)file forSystem:(NSString *)identifier;
++ (NSString *)serialForFile:(__kindof OEFile *)file forSystem:(NSString *)identifier;
 
 + (instancetype)systemForPlugin:(OESystemPlugin *)plugin inContext:(NSManagedObjectContext *)context;
 + (instancetype)systemForPluginIdentifier:(NSString *)identifier inContext:(NSManagedObjectContext *)context;
 
-#pragma mark -
-#pragma mark Core Data utilities
+/// Toggles the system's enabled status. If toggling the status would cause an unwanted situation (e.g., there would be no systems enabled), returns NO with an appropriate error message to present to the user.
+- (BOOL)toggleEnabledWithError:(NSError **)error;
+
+/// Convenience method for attempting to toggle the system's enabled status and automatically presenting a modal alert if the toggle fails. Returns YES if the toggle succeeded.
+- (BOOL)toggleEnabledAndPresentError;
+
+#pragma mark - Core Data utilities
+
 @property (nonatomic, readonly) CGFloat coverAspectRatio;
-#pragma mark -
-#pragma mark Data Model Properties
-@property(nonatomic, retain) NSString *lastLocalizedName;
-@property(nonatomic, retain) NSString *shortname;
-@property(nonatomic, retain) NSString *systemIdentifier;
-@property(nonatomic, retain) NSNumber *enabled;
+
+#pragma mark - Data Model Relationships
+
+@property(nonatomic, readonly, nullable) NSMutableSet  <OEDBGame *> *mutableGames;
 
 #pragma mark -
-#pragma mark Data Model Relationships
-@property(nonatomic, retain)   NSSet         *games;
-@property(nonatomic, readonly) NSMutableSet  *mutableGames;
 
-#pragma mark -
-- (OESystemPlugin *)plugin;
+@property(readonly, nullable) OESystemPlugin *plugin;
 
 @property(readonly) NSImage  *icon;
 @property(readonly) NSString *name;
+
 @end
+
+NS_ASSUME_NONNULL_END

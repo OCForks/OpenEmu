@@ -24,11 +24,11 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Foundation/Foundation.h>
-#import "OETheme.h"
+@import Foundation;
+
 @protocol OEListViewDataSourceItem <NSObject>
 
-- (OEThemeImage *)listViewStatus;
+- (NSString *)listViewStatus;
 - (NSNumber *)listViewRating;
 - (NSString *)listViewTitle;
 - (NSString *)listViewLastPlayed;
